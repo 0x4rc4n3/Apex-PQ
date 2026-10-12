@@ -11,7 +11,7 @@
   {% block head %}{% endblock %}
 </head>
 <body>
-  {% if session.get('did') %}
+  {% if me %}
   <!-- ══ Authenticated shell ═══════════════════════════════════════════════ -->
   <div class="app-shell">
     <nav class="topbar">
@@ -29,14 +29,14 @@
       </div>
       <div class="topbar-spacer"></div>
       <div class="topbar-user">
-        <div class="user-avatar">{{ session.full_name[0]|upper if session.full_name else '?' }}</div>
+        <div class="user-avatar">{{ me.full_name[0]|upper if me.full_name else '?' }}</div>
         <div class="user-info">
-          <div class="user-name">{{ session.full_name }}</div>
+          <div class="user-name">{{ me.full_name }}</div>
           <div class="user-sub">
-            {% if session.role == 'admin' %}
+            {% if me.role == 'admin' %}
               <span class="badge badge-admin" style="padding:1px 7px;font-size:12px">Admin</span>
             {% else %}
-              {{ session.email.split('@')[0] }}
+              {{ me.email.split('@')[0] }}
             {% endif %}
           </div>
         </div>
@@ -47,7 +47,7 @@
     </nav>
 
     <aside class="sidebar">
-      {% if session.role == 'admin' %}
+      {% if me.role == 'admin' %}
         <div class="nav-section-label">Management</div>
         <a class="nav-link {% if request.endpoint=='admin_dashboard' %}active{% endif %}"
            href="{{ url_for('admin_dashboard') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Dashboard</a>

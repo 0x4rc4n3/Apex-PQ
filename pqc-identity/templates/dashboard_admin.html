@@ -64,7 +64,7 @@
           <td>
             <div class="crypto-field did-field" title="{{ req.did }}">
               <div class="crypto-field-text truncate">{{ req.did[:15] }}…{{ req.did[-6:] }}</div>
-              <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ req.did }}', this)" title="Copy DID" aria-label="Copy DID">
+              <button class="crypto-copy-btn icon-only" data-copy="{{ req.did }}" onclick="copyToClipboard(this.dataset.copy, this)" title="Copy DID" aria-label="Copy DID">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               </button>
             </div>
@@ -72,7 +72,7 @@
           <td>
             <div class="crypto-field pk-field" title="{{ req.pubkey_hex }}">
               <div class="crypto-field-text truncate">{{ req.pubkey_hex[:10] }}…{{ req.pubkey_hex[-8:] }}</div>
-              <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ req.pubkey_hex }}', this)" title="Copy Public Key" aria-label="Copy Public Key">
+              <button class="crypto-copy-btn icon-only" data-copy="{{ req.pubkey_hex }}" onclick="copyToClipboard(this.dataset.copy, this)" title="Copy Public Key" aria-label="Copy Public Key">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               </button>
             </div>
@@ -137,7 +137,7 @@
           <td>
             <div class="crypto-field did-field" title="{{ u.did }}">
               <div class="crypto-field-text truncate">{{ u.did[:15] }}…{{ u.did[-6:] }}</div>
-              <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ u.did }}', this)" title="Copy DID" aria-label="Copy DID">
+              <button class="crypto-copy-btn icon-only" data-copy="{{ u.did }}" onclick="copyToClipboard(this.dataset.copy, this)" title="Copy DID" aria-label="Copy DID">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               </button>
             </div>
@@ -145,7 +145,7 @@
           <td>
             <div class="crypto-field pk-field" title="{{ u.pubkey_hex }}">
               <div class="crypto-field-text truncate">{{ u.pubkey_hex[:10] }}…{{ u.pubkey_hex[-8:] }}</div>
-              <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ u.pubkey_hex }}', this)" title="Copy Public Key" aria-label="Copy Public Key">
+              <button class="crypto-copy-btn icon-only" data-copy="{{ u.pubkey_hex }}" onclick="copyToClipboard(this.dataset.copy, this)" title="Copy Public Key" aria-label="Copy Public Key">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               </button>
             </div>
@@ -203,7 +203,7 @@
           <div style="font-size:11.5px; color:var(--text-faint); margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em;">Current Tip Hash</div>
           <div class="crypto-field" style="padding:4px 8px;">
             <div class="crypto-field-text" style="font-size:12px;">{{ s.tip }}</div>
-            <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ s.tip }}', this)" title="Copy Tip Hash" aria-label="Copy Tip Hash">
+            <button class="crypto-copy-btn icon-only" data-copy="{{ s.tip }}" onclick="copyToClipboard(this.dataset.copy, this)" title="Copy Tip Hash" aria-label="Copy Tip Hash">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
           </div>

@@ -11,8 +11,8 @@
     <div style="flex:1;min-width:0">
       <div class="did-strip-label">Verified University Identity</div>
       <div class="crypto-field" style="margin-top:4px; max-width:100%">
-        <div class="crypto-field-text">{{ user.did if user else session.get('did') }}</div>
-        <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ user.did if user else session.get('did') }}', this)" title="Copy DID" aria-label="Copy DID">
+        <div class="crypto-field-text">{{ user.did if user else '' }}</div>
+        <button class="crypto-copy-btn icon-only" data-copy="{{ user.did if user else '' }}" onclick="copyToClipboard(this.dataset.copy, this)" title="Copy DID" aria-label="Copy DID">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
         </button>
       </div>
@@ -23,8 +23,8 @@
   <!-- Page header -->
   <div class="page-header">
     <div>
-      <h1 class="page-title">Welcome back, {{ ((user.full_name if user and user.full_name else session.get('full_name', 'Student')).split())[0] }}</h1>
-      <p class="page-subtitle">{{ user.email if user and user.email else session.get('email', '') }} · Student ID: {{ (user.student_id if user and user.student_id else (user.email.split('@')[0] if user and user.email else 'N/A')) }}</p>
+      <h1 class="page-title">Welcome back, {{ ((user.full_name if user and user.full_name else 'Student').split())[0] }}</h1>
+      <p class="page-subtitle">{{ user.email if user and user.email else '' }} · Student ID: {{ (user.student_id if user and user.student_id else (user.email.split('@')[0] if user and user.email else 'N/A')) }}</p>
     </div>
   </div>
 

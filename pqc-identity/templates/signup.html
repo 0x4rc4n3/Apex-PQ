@@ -172,7 +172,7 @@ document.getElementById("btn-store-confirm").addEventListener("click", async () 
     const full_name = document.getElementById("full-name").value.trim();
     const roll_no   = document.getElementById("roll-no").value.trim();
 
-    // 1. Dispatch custom event for content script
+    // Hand the identity to the wallet extension (it encrypts it behind your PIN)
     window.dispatchEvent(new CustomEvent("PQC_IDENTITY_GENERATED", {
       detail: {
         full_name,
@@ -182,46 +182,6 @@ document.getElementById("btn-store-confirm").addEventListener("click", async () 
         privkey_hex: generatedIdentity.privkey_hex
       }
     }));
-
-    // 2. Sync to seeds.json via backend API
-    try {
-      const seedsResp = await fetch("/api/wallet/seeds");
-      let seeds = seedsResp.ok ? await seedsResp.json() : [];
-      if (!Array.isArray(seeds)) seeds = [];
-      if (!seeds.some(s => s.did === generatedIdentity.did)) {
-        seeds.push({
-          name: full_name,
-          email: `${roll_no}@apex.edu`,
-          roll_no: roll_no,
-          role: "student",
-          did: generatedIdentity.did,
-          pubkey_hex: generatedIdentity.pubkey_hex,
-          privkey_hex: generatedIdentity.privkey_hex
-        });
-        await fetch("/api/wallet/seeds", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(seeds)
-        });
-      }
-    } catch(err) {
-      console.warn("Seeds sync fallback:", err);
-    }
-
-    // 3. LocalStorage backup
-    try {
-      let localAccs = JSON.parse(localStorage.getItem("quantum_wallet_accounts") || "[]");
-      localAccs.push({
-        name: full_name,
-        email: `${roll_no}@apex.edu`,
-        roll_no: roll_no,
-        role: "student",
-        did: generatedIdentity.did,
-        pubkey_hex: generatedIdentity.pubkey_hex,
-        privkey_hex: generatedIdentity.privkey_hex
-      });
-      localStorage.setItem("quantum_wallet_accounts", JSON.stringify(localAccs));
-    } catch(e) {}
 
     showAlert("alert-store", "✓ Saved to Wallet Extension! Redirecting…", "success");
     setTimeout(() => {

@@ -65,7 +65,7 @@
             <div class="v-label">Decentralized Identifier</div>
             <div class="crypto-field">
               <div class="crypto-field-text">{{ result.did }}</div>
-              <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ result.did }}', this)" title="Copy DID" aria-label="Copy DID">
+              <button class="crypto-copy-btn icon-only" data-copy="{{ result.did }}" onclick="copyToClipboard(this.dataset.copy, this)" title="Copy DID" aria-label="Copy DID">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               </button>
             </div>
@@ -75,7 +75,7 @@
             <div class="v-label">Public Key (1312 bytes)</div>
             <div class="crypto-field">
               <div class="crypto-field-text">pk_{{ result.pubkey_hex }}</div>
-              <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ result.pubkey_hex }}', this)" title="Copy Public Key" aria-label="Copy Public Key">
+              <button class="crypto-copy-btn icon-only" data-copy="{{ result.pubkey_hex }}" onclick="copyToClipboard(this.dataset.copy, this)" title="Copy Public Key" aria-label="Copy Public Key">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               </button>
             </div>
@@ -113,7 +113,7 @@
               <div class="v-label">Block Hash</div>
               <div class="crypto-field" style="margin-top:6px">
                 <div class="crypto-field-text">{{ chain_block.hash }}</div>
-                <button class="crypto-copy-btn" onclick="copyToClipboard('{{ chain_block.hash }}', this)">⧉</button>
+                <button class="crypto-copy-btn" data-copy="{{ chain_block.hash }}" onclick="copyToClipboard(this.dataset.copy, this)">⧉</button>
               </div>
             </div>
           </div>

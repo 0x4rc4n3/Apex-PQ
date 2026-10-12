@@ -1,0 +1,18 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build liboqs (ML-DSA-44 only)
+        run: |
+          sudo apt-get update && sudo apt-get install -y cmake ninja-build
+          cmake -S liboqs -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+            -DOQS_MINIMAL_BUILD="SIG_ml_dsa_44" -DOQS_USE_OPENSSL=OFF -DOQS_BUILD_ONLY_LIB=ON
+          cmake --build build
+          echo "OQS_LIB=$PWD/build/lib/liboqs.so" >> "$GITHUB_ENV"
+      - run: pip install -r requirements.txt
+      - run: cd pqc-identity && python -m unittest discover -s tests -v

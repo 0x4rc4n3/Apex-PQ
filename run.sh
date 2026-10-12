@@ -1,26 +1,15 @@
 #!/usr/bin/env bash
-# ══════════════════════════════════════════════════════════════════════════
-# run.sh — Apex-PQ Universal Launcher (Native or Docker)
-# ══════════════════════════════════════════════════════════════════════════
-set -e
-
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$DIR"
-
-MODE="${1:-native}"
-
-if [ "$MODE" = "docker" ]; then
-    echo "🐳 Launching Apex-PQ inside Docker Container..."
-    if command -v docker compose >/dev/null 2>&1; then
-        docker compose up --build
-    elif command -v docker-compose >/dev/null 2>&1; then
-        docker-compose up --build
-    else
-        echo "❌ Docker Compose not found. Please install Docker or run './run.sh native'"
-        exit 1
-    fi
-else
-    echo "🚀 Starting Apex-PQ Gateway & 3-Node BFT Ledger natively..."
-    cd "$DIR/pqc-identity"
-    python3 app.py
-fi
+# Apex-PQ launcher:  ./run.sh [native|docker|test]
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+case "${1:-native}" in
+  docker)
+    docker compose up --build ;;
+  test)
+    cd pqc-identity && python3 -m unittest discover -s tests -v ;;
+  native)
+    export APEX_DEMO_MODE="${APEX_DEMO_MODE:-1}"
+    echo "Starting Apex-PQ on http://127.0.0.1:8080 (demo mode: $APEX_DEMO_MODE, localhost only)"
+    cd pqc-identity && exec python3 app.py ;;
+  *) echo "usage: $0 [native|docker|test]"; exit 1 ;;
+esac

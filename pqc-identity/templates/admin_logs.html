@@ -90,7 +90,7 @@
               {% if event.did %}
                 <div class="crypto-field" style="max-width:240px">
                   <div class="crypto-field-text">{{ event.did }}</div>
-                  <button class="crypto-copy-btn" onclick="copyToClipboard('{{ event.did }}', this)">⧉</button>
+                  <button class="crypto-copy-btn" data-copy="{{ event.did }}" onclick="copyToClipboard(this.dataset.copy, this)">⧉</button>
                 </div>
               {% else %}
                 <span style="color: var(--text-muted); font-style: italic; font-size:13px">Global System</span>

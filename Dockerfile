@@ -1,46 +1,31 @@
-# ══════════════════════════════════════════════════════════════════════════
-# Apex-PQ — Post-Quantum Identity Ecosystem Dockerfile
-# FIPS 204 ML-DSA-44 Lattice Signatures + 3-Node BFT Decentralized Ledger
-# ══════════════════════════════════════════════════════════════════════════
-
-FROM python:3.11-slim AS base
-
-# Install system utilities & libraries
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    libssl3 \
+# ── Stage 1: build liboqs (ML-DSA-44 only) from the vendored source ──────────
+# Building from source avoids shipping a prebuilt binary tied to one glibc/OpenSSL/CPU.
+FROM python:3.12-slim-bookworm AS oqs-build
+RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build gcc g++ \
     && rm -rf /var/lib/apt/lists/*
+COPY liboqs /src/liboqs
+RUN cmake -S /src/liboqs -B /build -GNinja \
+        -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+        -DOQS_MINIMAL_BUILD="SIG_ml_dsa_44" -DOQS_USE_OPENSSL=OFF \
+        -DOQS_BUILD_ONLY_LIB=ON -DCMAKE_INSTALL_PREFIX=/opt/oqs \
+    && cmake --build /build && cmake --install /build
 
-# Set up library and app environment
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH \
-    PORT=8080
-
+# ── Stage 2: runtime ─────────────────────────────────────────────────────────
+FROM python:3.12-slim-bookworm
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PORT=8080 HOST=0.0.0.0 \
+    OQS_LIB=/opt/oqs/lib/liboqs.so
+COPY --from=oqs-build /opt/oqs /opt/oqs
 WORKDIR /app
-
-# Install Post-Quantum liboqs shared library
-# Copies precompiled liboqs into standard system dynamic library path
-COPY liboqs/install/usr/local/lib/liboqs.so* /usr/local/lib/
-COPY liboqs/install/usr/local/include/oqs /usr/local/include/oqs
-RUN ldconfig /usr/local/lib
-
-# Install Python application dependencies
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
-# Copy Apex-PQ backend application and wallet assets
-COPY pqc-identity /app
-
-# Ensure database directory exists with correct permissions
-RUN mkdir -p /app/db
-
-# Health check endpoint
-HEALTHCHECK --interval=20s --timeout=5s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/login || exit 1
-
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && useradd --system --uid 10001 --home /app apex \
+    && mkdir -p /data && chown apex /data
+COPY --chown=apex pqc-identity /app
+USER apex
+ENV APEX_DATA_DIR=/data
+VOLUME /data
 EXPOSE 8080
-
-# Run the Apex-PQ Gateway & BFT Ledger application
-CMD ["python", "app.py"]
+HEALTHCHECK --interval=20s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request,os;urllib.request.urlopen('http://127.0.0.1:%s/login'%os.environ.get('PORT','8080'))"
+# One worker: rate limiting and the ledger write-lock are in-process.
+CMD ["sh", "-c", "exec gunicorn -w 1 --threads 8 -b ${HOST}:${PORT} app:app"]

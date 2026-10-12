@@ -2,7 +2,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-!liboqs/install/usr/local/lib/liboqs.so*
+*.so.*
+liboqs/install/
+liboqs/build/
 .Python
 env/
 build/
@@ -39,3 +41,12 @@ pqc-identity/__pycache__/
 *.log
 videos/
 Docs/
+
+# Secrets & runtime state — never commit
+pqc-identity/db/
+**/admin_did.json
+**/admin_public.json
+**/ADMIN_KEY_IMPORT_THEN_DELETE.json
+**/secret_key
+**/seeds.json
+identity*.json

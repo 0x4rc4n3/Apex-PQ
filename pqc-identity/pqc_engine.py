@@ -1,189 +1,167 @@
 """
-pqc_engine.py — ML-DSA-44 (Dilithium2) PQC cryptography engine
-Calls liboqs direct function API — compatible with liboqs 0.x and 1.x.
-No OQS_SIG struct coupling; uses stable exported symbols.
+pqc_engine.py — ML-DSA-44 (FIPS 204) engine on top of liboqs via ctypes.
+
+* Keygen / sign / verify call the stable liboqs exports OQS_SIG_ml_dsa_44_*.
+* DIDs are a short, ledger-resolved identifier derived from the public key
+  (see _make_did) — NOT a spec-conformant, self-resolving did:key.
+* Login signatures are domain-separated and bound to the DID and relying
+  party (see login_message), so a signature for one site/DID/purpose cannot
+  be replayed on another.
 """
 import ctypes
-import os
+import ctypes.util
 import hashlib
-
-# ── Locate liboqs ──────────────────────────────────────────────────
+import os
+import re
 
 _BASE        = os.path.dirname(os.path.abspath(__file__))
 _LIBOQS_ROOT = os.path.normpath(os.path.join(_BASE, "..", "liboqs"))
 
 _LIB_SEARCH_PATHS = [
+    os.environ.get("OQS_LIB", ""),
     os.path.join(_LIBOQS_ROOT, "install", "usr", "local", "lib", "liboqs.so"),
     os.path.join(_LIBOQS_ROOT, "build", "lib", "liboqs.so"),
-    os.path.expanduser("~/_oqs/lib/liboqs.so"),
-    os.path.expanduser("~/.pqc_ledger/liboqs/install/usr/local/lib/liboqs.so"),
     "/usr/local/lib/liboqs.so",
+    "/usr/local/lib/liboqs.so.9",
     "/usr/lib/liboqs.so",
+    ctypes.util.find_library("oqs") or "",
 ]
 
 _lib = None
+
 
 def _load_lib():
     global _lib
     if _lib is not None:
         return _lib
+    tried = []
     for p in _LIB_SEARCH_PATHS:
-        p = os.path.normpath(p)
-        if not os.path.exists(p):
+        if not p:
             continue
-        lib_dir = os.path.dirname(p)
-        ld = os.environ.get("LD_LIBRARY_PATH", "")
-        if lib_dir not in ld:
-            os.environ["LD_LIBRARY_PATH"] = lib_dir + (":" + ld if ld else "")
+        tried.append(p)
+        if os.path.sep in p and not os.path.exists(p):
+            continue
         try:
             candidate = ctypes.CDLL(p)
-            # Probe a symbol we know exists
-            _ = candidate.OQS_SIG_ml_dsa_44_keypair
+            candidate.OQS_SIG_ml_dsa_44_keypair  # probe the symbol
             _lib = candidate
-            print(f"[PQC] liboqs loaded: {p}")
             return _lib
-        except (OSError, AttributeError) as e:
-            print(f"[PQC] skip {p}: {e}")
-    raise RuntimeError(
-        "liboqs.so not found. Searched:\n  " + "\n  ".join(_LIB_SEARCH_PATHS)
-    )
+        except (OSError, AttributeError):
+            continue
+    raise RuntimeError("liboqs with ML-DSA-44 not found. Tried:\n  " + "\n  ".join(tried))
 
-# ── ML-DSA-44 constants (NIST FIPS 204, Level 2) ──────────────────
 
-PK_LEN  = 1312   # ML-DSA-44 public key bytes
-SK_LEN  = 2560   # ML-DSA-44 secret key bytes
-SIG_LEN = 2420   # ML-DSA-44 max signature bytes
+def available() -> bool:
+    try:
+        _load_lib()
+        return True
+    except RuntimeError:
+        return False
 
-# ── Public API ─────────────────────────────────────────────────────
+
+# ── ML-DSA-44 sizes (FIPS 204, security category 2) ─────────────────────────
+PK_LEN  = 1312
+SK_LEN  = 2560
+SIG_LEN = 2420   # signature length is fixed for ML-DSA
+
+_u8 = ctypes.c_uint8
+_P  = ctypes.POINTER(_u8)
+
+
+def _buf(data: bytes):
+    return (_u8 * len(data)).from_buffer_copy(data)
+
 
 def generate_keypair():
-    """
-    Generate an ML-DSA-44 (Dilithium2) keypair.
-    Returns: (did: str, pubkey_hex: str, privkey_hex: str)
-    """
+    """Returns (did, pubkey_hex, privkey_hex)."""
     lib = _load_lib()
-
-    # int OQS_SIG_ml_dsa_44_keypair(uint8_t *pk, uint8_t *sk)
     lib.OQS_SIG_ml_dsa_44_keypair.restype  = ctypes.c_int
-    lib.OQS_SIG_ml_dsa_44_keypair.argtypes = [
-        ctypes.POINTER(ctypes.c_uint8),  # pk
-        ctypes.POINTER(ctypes.c_uint8),  # sk
-    ]
-
-    pk_buf = (ctypes.c_uint8 * PK_LEN)()
-    sk_buf = (ctypes.c_uint8 * SK_LEN)()
-    rc = lib.OQS_SIG_ml_dsa_44_keypair(pk_buf, sk_buf)
-    if rc != 0:
-        raise RuntimeError(f"ML-DSA-44 keygen failed (rc={rc})")
-
-    pubkey_hex  = bytes(pk_buf).hex()
-    privkey_hex = bytes(sk_buf).hex()
-    did         = _make_did(bytes(pk_buf))
-    return did, pubkey_hex, privkey_hex
+    lib.OQS_SIG_ml_dsa_44_keypair.argtypes = [_P, _P]
+    pk = (_u8 * PK_LEN)()
+    sk = (_u8 * SK_LEN)()
+    if lib.OQS_SIG_ml_dsa_44_keypair(pk, sk) != 0:
+        raise RuntimeError("ML-DSA-44 key generation failed")
+    pk_b = bytes(pk)
+    return derive_did(pk_b), pk_b.hex(), bytes(sk).hex()
 
 
 def sign_message(privkey_hex: str, message: bytes) -> str:
-    """
-    Sign a message with an ML-DSA-44 secret key.
-    Returns: hex-encoded signature
-    """
     lib = _load_lib()
-
-    # int OQS_SIG_ml_dsa_44_sign(uint8_t *sig, size_t *siglen,
-    #                             const uint8_t *msg, size_t msglen,
-    #                             const uint8_t *sk)
     lib.OQS_SIG_ml_dsa_44_sign.restype  = ctypes.c_int
-    lib.OQS_SIG_ml_dsa_44_sign.argtypes = [
-        ctypes.POINTER(ctypes.c_uint8),  # sig
-        ctypes.POINTER(ctypes.c_size_t), # siglen
-        ctypes.POINTER(ctypes.c_uint8),  # msg
-        ctypes.c_size_t,                 # msglen
-        ctypes.POINTER(ctypes.c_uint8),  # sk
-    ]
-
+    lib.OQS_SIG_ml_dsa_44_sign.argtypes = [_P, ctypes.POINTER(ctypes.c_size_t),
+                                           _P, ctypes.c_size_t, _P]
     sk_bytes = bytes.fromhex(privkey_hex)
     if len(sk_bytes) != SK_LEN:
-        raise ValueError(f"Invalid SK length: {len(sk_bytes)} (expected {SK_LEN})")
-
-    sk_buf  = (ctypes.c_uint8 * SK_LEN)(*sk_bytes)
-    sig_buf = (ctypes.c_uint8 * SIG_LEN)()
+        raise ValueError(f"Invalid secret key length: {len(sk_bytes)} (expected {SK_LEN})")
+    sig     = (_u8 * SIG_LEN)()
     sig_len = ctypes.c_size_t(SIG_LEN)
-    msg_buf = (ctypes.c_uint8 * len(message))(*message)
-
-    rc = lib.OQS_SIG_ml_dsa_44_sign(
-        sig_buf, ctypes.byref(sig_len),
-        msg_buf, len(message),
-        sk_buf
-    )
+    rc = lib.OQS_SIG_ml_dsa_44_sign(sig, ctypes.byref(sig_len),
+                                    _buf(message), len(message), _buf(sk_bytes))
     if rc != 0:
-        raise RuntimeError(f"Signing failed (rc={rc})")
-
-    return bytes(sig_buf[:sig_len.value]).hex()
+        raise RuntimeError("ML-DSA-44 signing failed")
+    return bytes(sig[:sig_len.value]).hex()
 
 
 def verify_signature(pubkey_hex: str, message: bytes, sig_hex: str) -> bool:
-    """
-    Verify an ML-DSA-44 signature.
-    Returns True if valid, False otherwise (never raises on bad sig).
-    """
+    """True only for a valid signature. Never raises on malformed input."""
     try:
         lib = _load_lib()
-
-        # int OQS_SIG_ml_dsa_44_verify(const uint8_t *msg, size_t msglen,
-        #                               const uint8_t *sig, size_t siglen,
-        #                               const uint8_t *pk)
         lib.OQS_SIG_ml_dsa_44_verify.restype  = ctypes.c_int
-        lib.OQS_SIG_ml_dsa_44_verify.argtypes = [
-            ctypes.POINTER(ctypes.c_uint8),  # msg
-            ctypes.c_size_t,                 # msglen
-            ctypes.POINTER(ctypes.c_uint8),  # sig
-            ctypes.c_size_t,                 # siglen
-            ctypes.POINTER(ctypes.c_uint8),  # pk
-        ]
-
-        pk_bytes  = bytes.fromhex(pubkey_hex)
-        sig_bytes = bytes.fromhex(sig_hex)
-
-        if len(pk_bytes) != PK_LEN:
+        lib.OQS_SIG_ml_dsa_44_verify.argtypes = [_P, ctypes.c_size_t, _P,
+                                                 ctypes.c_size_t, _P]
+        pk  = bytes.fromhex(pubkey_hex)
+        sig = bytes.fromhex(sig_hex)
+        if len(pk) != PK_LEN or len(sig) != SIG_LEN:
             return False
-
-        pk_buf  = (ctypes.c_uint8 * PK_LEN)(*pk_bytes)
-        sig_buf = (ctypes.c_uint8 * len(sig_bytes))(*sig_bytes)
-        msg_buf = (ctypes.c_uint8 * len(message))(*message)
-
-        rc = lib.OQS_SIG_ml_dsa_44_verify(
-            msg_buf, len(message),
-            sig_buf, len(sig_bytes),
-            pk_buf
-        )
-        return rc == 0
+        return lib.OQS_SIG_ml_dsa_44_verify(_buf(message), len(message),
+                                            _buf(sig), len(sig), _buf(pk)) == 0
     except Exception:
         return False
 
 
-# ── DID generation (did:key spec) ─────────────────────────────────
+# ── Login message (domain separation + binding) ─────────────────────────────
+
+LOGIN_DOMAIN = b"apex-pq/login/v1"
+
+
+def login_message(did: str, challenge: str, rp_id: str) -> bytes:
+    """Exact bytes a wallet must sign to authenticate."""
+    return b"\n".join([LOGIN_DOMAIN, rp_id.encode(), did.encode(), challenge.encode()])
+
+
+# ── Identifier derivation ────────────────────────────────────────────────────
 
 _B58_ALPHA = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+_HEX_RE    = re.compile(r"^[0-9a-f]+$")
+
 
 def _b58encode(data: bytes) -> str:
-    leading = sum(1 for b in data if b == 0)
-    n = int.from_bytes(data, "big")
-    out = []
+    leading = len(data) - len(data.lstrip(b"\x00"))
+    n, out = int.from_bytes(data, "big"), []
     while n:
         n, r = divmod(n, 58)
-        out.append(_B58_ALPHA[r:r+1])
+        out.append(_B58_ALPHA[r:r + 1])
     return (b"1" * leading + b"".join(reversed(out))).decode()
 
-def _make_did(pk_bytes: bytes) -> str:
+
+def derive_did(pk_bytes: bytes) -> str:
     """
-    Derive a shorter did:key from ML-DSA-44 public key.
-    Uses SHA3-256 hash to keep DID length small (~22-26 chars).
+    Short identifier: did:key:z + base58(0x0c01 || SHA3-256(pk)[:16]).
+    It is a hash commitment to the public key that is resolved through the
+    ledger; it is NOT a W3C did:key (those embed the full key).
     """
-    digest = hashlib.sha3_256(pk_bytes).digest()[:16] # 16 bytes entropy
-    # multicodec varint 0x0c01 + truncate
-    multicodec = bytes([0x0c, 0x01])
-    encoded    = _b58encode(multicodec + digest)
-    return f"did:key:z{encoded}"
+    digest = hashlib.sha3_256(pk_bytes).digest()[:16]
+    return "did:key:z" + _b58encode(bytes([0x0C, 0x01]) + digest)
+
+
+def is_valid_pubkey_hex(pubkey_hex: str) -> bool:
+    return (isinstance(pubkey_hex, str) and len(pubkey_hex) == PK_LEN * 2
+            and bool(_HEX_RE.match(pubkey_hex)))
+
+
+def did_matches_pubkey(did: str, pubkey_hex: str) -> bool:
+    return is_valid_pubkey_hex(pubkey_hex) and derive_did(bytes.fromhex(pubkey_hex)) == did
+
 
 def did_to_short(did: str) -> str:
     return did[:20] + "…" + did[-8:]

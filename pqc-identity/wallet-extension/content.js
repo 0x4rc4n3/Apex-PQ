@@ -77,23 +77,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return false;
 });
 
-// Listen for identity generation broadcast from signup.html
+// Identity generated on the signup page: forward to the background worker, which
+// holds it in memory until the user unlocks the wallet (it is never stored in plaintext on disk).
 window.addEventListener("PQC_IDENTITY_GENERATED", (e) => {
   const d = e.detail;
-  if (!d || !d.did) return;
-  chrome.storage.local.get(["accounts"], (res) => {
-    const accs = res.accounts || [];
-    accs.push({
-      name: d.full_name,
-      email: `${d.roll_no}@apex.edu`,
-      roll_no: d.roll_no,
-      role: d.roll_no === "admin" ? "admin" : "student",
-      did: d.did,
-      pubkey_hex: d.pubkey_hex,
-      privkey_hex: d.privkey_hex
-    });
-    chrome.storage.local.set({ accounts: accs, currentIdx: accs.length - 1 }, () => {
-      console.log("Wallet extension securely stored new identity natively.");
-    });
-  });
+  if (d && d.did) chrome.runtime.sendMessage({ type: "PENDING_IDENTITY", identity: d });
 });

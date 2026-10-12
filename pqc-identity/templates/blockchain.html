@@ -41,7 +41,7 @@
           <div style="color:var(--text-faint);margin-bottom:2px">Tip Hash</div>
           <div class="crypto-field" style="border:none; background:rgba(0,0,0,0.1); padding:4px 8px; max-width:210px">
             <div class="crypto-field-text" style="font-size:12px">{{ s.tip }}</div>
-            <button class="crypto-copy-btn" onclick="copyToClipboard('{{ s.tip }}', this)">⧉</button>
+            <button class="crypto-copy-btn" data-copy="{{ s.tip }}" onclick="copyToClipboard(this.dataset.copy, this)">⧉</button>
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@
                 <span class="bf-k">DID</span>
                 <div class="crypto-field">
                   <div class="crypto-field-text">{{ blk.data.did }}</div>
-                  <button class="crypto-copy-btn" onclick="copyToClipboard('{{ blk.data.did }}', this)">⧉</button>
+                  <button class="crypto-copy-btn" data-copy="{{ blk.data.did }}" onclick="copyToClipboard(this.dataset.copy, this)">⧉</button>
                 </div>
               </div>
               {% endif %}
@@ -128,7 +128,7 @@
                 <span class="bf-k">Pubkey</span>
                 <div class="crypto-field">
                   <div class="crypto-field-text">{{ blk.data.pubkey }}</div>
-                  <button class="crypto-copy-btn" onclick="copyToClipboard('{{ blk.data.pubkey }}', this)">⧉</button>
+                  <button class="crypto-copy-btn" data-copy="{{ blk.data.pubkey }}" onclick="copyToClipboard(this.dataset.copy, this)">⧉</button>
                 </div>
               </div>
               {% endif %}
@@ -139,14 +139,14 @@
                 <span class="bf-k">Hash</span>
                 <div class="crypto-field" style="margin-top:4px">
                   <div class="crypto-field-text">{{ blk.hash }}</div>
-                  <button class="crypto-copy-btn" onclick="copyToClipboard('{{ blk.hash }}', this)">⧉</button>
+                  <button class="crypto-copy-btn" data-copy="{{ blk.hash }}" onclick="copyToClipboard(this.dataset.copy, this)">⧉</button>
                 </div>
               </div>
               <div class="bf">
                 <span class="bf-k">Prev</span>
                 <div class="crypto-field">
                   <div class="crypto-field-text">{{ blk.prev_hash }}</div>
-                  <button class="crypto-copy-btn" onclick="copyToClipboard('{{ blk.prev_hash }}', this)">⧉</button>
+                  <button class="crypto-copy-btn" data-copy="{{ blk.prev_hash }}" onclick="copyToClipboard(this.dataset.copy, this)">⧉</button>
                 </div>
               </div>
             </div>
