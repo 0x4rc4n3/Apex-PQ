@@ -4,6 +4,7 @@ app.py — Apex-PQ identity portal (Flask).
 Authentication = ML-DSA-44 signature over a server challenge. There are no
 passwords. See README.md for the threat model and known limitations.
 """
+import contextlib
 import datetime
 import functools
 import json
@@ -14,7 +15,7 @@ import time
 from collections import defaultdict, deque
 from urllib.parse import urlparse
 
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, g, jsonify, redirect, render_template, request, session, url_for
 
 import ledger
 from config import BASE_DIR, DATA_DIR, UNI_DOMAIN, env_flag
@@ -61,13 +62,36 @@ def _load_secret_key() -> str:
 
 app.secret_key = _load_secret_key()
 
-# ── Rate limiting (in-process; run a single gunicorn worker) ─────────────────
+# ── Rate limiting (Redis-backed with in-process fallback) ──────────────────────
 
 class RateLimiter:
     def __init__(self):
         self._hits, self._lock = defaultdict(deque), threading.Lock()
+        self._redis = None
+        redis_url = os.environ.get("REDIS_URL")
+        if redis_url:
+            try:
+                import redis
+                self._redis = redis.from_url(redis_url, socket_timeout=2)
+                self._redis.ping()
+            except Exception as e:
+                print(f"[RateLimiter] Redis unavailable ({e}); falling back to in-memory limiter.")
+                self._redis = None
 
     def allow(self, key: str, limit: int, window: int) -> bool:
+        if self._redis:
+            try:
+                now = time.time()
+                rkey = f"apex:rate:{key}"
+                pipe = self._redis.pipeline()
+                pipe.zremrangebyscore(rkey, 0, now - window)
+                pipe.zcard(rkey)
+                pipe.zadd(rkey, {f"{now}:{secrets.token_hex(4)}": now})
+                pipe.expire(rkey, window + 5)
+                _, count, _, _ = pipe.execute()
+                return count < limit
+            except Exception:
+                pass  # Fall back to in-process limiter on Redis blip
         now = time.monotonic()
         with self._lock:
             q = self._hits[key]
@@ -81,6 +105,27 @@ class RateLimiter:
 
 _limiter = RateLimiter()
 _admin_lock = threading.Lock()
+
+
+@contextlib.contextmanager
+def distributed_lock(name: str, timeout: float = 10.0):
+    """Distributed lock when REDIS_URL is configured, else process-level lock."""
+    r_client = _limiter._redis
+    if r_client:
+        lock = r_client.lock(f"apex:lock:{name}", timeout=timeout)
+        acquired = lock.acquire(blocking=True, blocking_timeout=timeout)
+        if not acquired:
+            raise RuntimeError(f"Could not acquire lock for {name}")
+        try:
+            yield
+        finally:
+            try:
+                lock.release()
+            except Exception:
+                pass
+    else:
+        with _admin_lock:
+            yield
 
 
 def rate_limited(name, limit, window):
@@ -97,6 +142,11 @@ def rate_limited(name, limit, window):
 # ── Request hooks ────────────────────────────────────────────────────────────
 
 _EXT_ALLOWED_PATHS = {"/api/sign", "/api/keygen"}   # the wallet popup calls these
+
+
+@app.before_request
+def setup_request():
+    g.csp_nonce = secrets.token_urlsafe(16)
 
 
 @app.before_request
@@ -119,6 +169,18 @@ def security_headers(resp):
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    nonce = getattr(g, "csp_nonce", "")
+    nonce_part = f"'nonce-{nonce}'" if nonce else ""
+    csp = (
+        f"default-src 'self'; "
+        f"script-src 'self' {nonce_part}; "
+        f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        f"font-src 'self' https://fonts.gstatic.com; "
+        f"img-src 'self' data:; "
+        f"connect-src 'self'; "
+        f"frame-ancestors 'none';"
+    )
+    resp.headers["Content-Security-Policy"] = csp
     if request.path.startswith("/api/"):
         resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -126,7 +188,11 @@ def security_headers(resp):
 
 @app.context_processor
 def inject_flags():
-    return {"demo_mode": app.config["DEMO_MODE"], "me": current_user()}
+    return {
+        "demo_mode": app.config["DEMO_MODE"],
+        "me": current_user(),
+        "csp_nonce": getattr(g, "csp_nonce", ""),
+    }
 
 
 def rp_id() -> str:
@@ -164,7 +230,6 @@ def truncate_did(did, head=20, tail=8):
 
 ADMIN_PUBLIC_FILE = os.path.join(DATA_DIR, "admin_public.json")
 ADMIN_SECRET_FILE = os.path.join(DATA_DIR, "ADMIN_KEY_IMPORT_THEN_DELETE.json")
-_LEGACY_ADMIN     = os.path.join(DATA_DIR, "admin_did.json")
 
 
 def bootstrap():
@@ -180,14 +245,9 @@ def _write_private(path, obj):
 
 
 def _ensure_admin():
-    src = ADMIN_PUBLIC_FILE if os.path.exists(ADMIN_PUBLIC_FILE) else (
-        _LEGACY_ADMIN if os.path.exists(_LEGACY_ADMIN) else None)
-    if src:
-        with open(src) as f:
+    if os.path.exists(ADMIN_PUBLIC_FILE):
+        with open(ADMIN_PUBLIC_FILE) as f:
             info = json.load(f)
-        if src == _LEGACY_ADMIN:
-            print("[PQC-ID] WARNING: legacy db/admin_did.json holds a private key on the server. "
-                  "Delete it and rotate the admin identity.")
         if not get_user_by_did(info["did"]):
             create_user(info["did"], info["email"], info["full_name"], None,
                         info["pubkey_hex"], role="admin")
@@ -473,7 +533,7 @@ def api_login():
 @admin_required
 def api_approve(req_id):
     admin = current_user()
-    with _admin_lock:
+    with distributed_lock("admin_approve"):
         req = get_request(req_id)
         if not req or req["status"] != "pending":
             return jsonify({"ok": False, "error": "Request not found or already processed."}), 404
@@ -510,7 +570,7 @@ def api_revoke(did):
         return jsonify({"ok": False, "error": "User not found."}), 404
     if user["role"] == "admin":
         return jsonify({"ok": False, "error": "Cannot revoke an admin."}), 400
-    with _admin_lock:
+    with distributed_lock("admin_revoke"):
         try:
             add_block({"action": "revoke", "did": did, "email": user["email"],
                        "revoked_by": admin["did"][:20] + "…"})
@@ -544,7 +604,7 @@ def api_edit_user(did):
             return jsonify({"ok": False, "error": "You cannot change your own role."}), 400
         if user["role"] == "admin" and count_admins() <= 1:
             return jsonify({"ok": False, "error": "Cannot demote the last admin."}), 400
-    with _admin_lock:
+    with distributed_lock("admin_edit"):
         try:
             add_block({"action": "edit_user", "did": did, "email": email, "role": role,
                        "edited_by": admin["did"][:20] + "…"})
