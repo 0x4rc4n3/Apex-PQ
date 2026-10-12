@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Registration Submitted{% endblock %}
+
+{% block auth_page %}
+<div class="pending-container">
+  <div class="pending-card">
+    <div class="pending-icon-wrap">
+      <div class="pending-pulse-ring"></div>
+      <img src="{{ url_for('static', filename='logo.svg') }}" style="width:36px; height:36px;" alt="Apex University">
+    </div>
+
+    <h2 style="font-size:24px;font-weight:800;color:var(--text-heading);margin-bottom:10px;letter-spacing:-0.02em">
+      Identity Submitted
+    </h2>
+
+    <p style="font-size:14.5px;color:var(--text-muted);line-height:1.6;margin-bottom:8px">
+      Your quantum-resistant registration request has been received and is awaiting <strong>administrator approval</strong>.
+    </p>
+    
+    <p style="font-size:13.5px;color:var(--text-faint);line-height:1.5;margin-bottom:20px">
+      Once approved, your decentralized identifier will be anchored to the 3-node ledger and you will be able to sign in immediately.
+    </p>
+
+    {% if did %}
+    <div class="pending-did-card">
+      <div class="pending-did-header">
+        <span class="pending-did-label">Assigned Identifier (DID)</span>
+        <span class="badge badge-pending" style="font-size:11px">Pending Approval</span>
+      </div>
+      <div class="crypto-field did-field" style="max-width:100%;width:100%;margin-top:6px" title="{{ did }}">
+        <div class="crypto-field-text" style="font-size:12.5px">{{ did }}</div>
+        <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ did }}', this)" title="Copy DID" aria-label="Copy DID">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
+      <div style="font-size:12px;color:var(--text-faint);margin-top:8px">
+        Your university records will be anchored cryptographically to this identifier.
+      </div>
+    </div>
+    {% endif %}
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:24px">
+      <a href="{{ url_for('login_page') }}" class="btn btn-primary btn-block" style="padding:11px 0;font-size:14.5px">
+        Continue to Sign In →
+      </a>
+      <a href="{{ url_for('signup_page') }}" class="btn btn-outline btn-block" style="padding:9px 0;font-size:13px">
+        Register Another Account
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block auth_shell %}{{ self.auth_page() }}{% endblock %}

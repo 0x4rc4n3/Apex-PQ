@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apex wallet</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <!-- Minimal Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <img src="logo.svg" width="22" height="22" alt="Apex wallet" style="display:block">
+      </div>
+      <span class="brand-name">Apex wallet</span>
+    </div>
+    <div class="header-actions">
+      <select class="account-select" id="acc-select" title="Switch Account"></select>
+    </div>
+  </div>
+
+  <div class="content-container">
+    <!-- User Account Card -->
+    <div class="account-card">
+      <div class="account-avatar" id="acc-avatar">?</div>
+      <div class="account-details">
+        <div class="account-name" id="acc-name">Loading…</div>
+        <div class="account-email" id="acc-email"></div>
+      </div>
+      <button class="btn-remove" id="btn-delete-acc" title="Remove Account">Remove</button>
+    </div>
+
+    <!-- Minimal DID Row: Just DID and Copy Button -->
+    <div class="did-card">
+      <div class="did-text" id="did-value">—</div>
+      <button class="btn-copy" id="btn-copy-did" title="Copy DID">Copy</button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-sign-login">
+        Sign &amp; Login
+      </button>
+      <button class="btn btn-outline" id="btn-show-key">
+        Show Private Key
+      </button>
+    </div>
+
+    <!-- Private Key Dropdown -->
+    <div class="key-reveal" id="key-reveal">
+      <div class="key-reveal-label">Private Key (Keep Secret)</div>
+      <div class="key-reveal-value" id="key-reveal-value"></div>
+    </div>
+  </div>
+
+  <!-- Global Master PIN Modal -->
+  <div class="wallet-overlay" id="pin-overlay">
+    <div class="pin-card">
+      <div class="pin-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary, #5b6cf9)">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <h3>Wallet Locked</h3>
+      <p>Enter master PIN to access keys.</p>
+      <input type="password" id="ext-pin" placeholder="••••" maxlength="6" autocomplete="off" autofocus>
+      <div id="pin-alert" class="pin-alert"></div>
+      <button class="btn btn-primary" id="btn-pin-confirm">Unlock Wallet</button>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="wallet-overlay" id="confirm-overlay" style="display:none;">
+    <div class="confirm-card">
+      <h3>Remove Identity?</h3>
+      <p>Permanently remove <strong id="delete-target-name">...</strong> from this wallet?</p>
+      <div class="modal-buttons">
+        <button class="btn btn-danger" id="btn-confirm-delete">Remove</button>
+        <button class="btn btn-outline" id="btn-cancel-delete">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

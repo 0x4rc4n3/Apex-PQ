@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Apex University Quantum Identity{% endblock %}
+
+{% block auth_page %}
+<div class="auth-page" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:90vh;text-align:center;">
+    <img src="{{ url_for('static', filename='logo.svg') }}" style="height:90px; margin-bottom:20px;">
+    <h1 style="font-size:36px; margin-bottom:10px;">Apex University Post-Quantum LMS</h1>
+    <p style="color:var(--text-muted); font-size:16px; margin-bottom:30px; max-width:500px;">
+        Secure, blockchain-anchored post-quantum identities. 
+        Please log in or create an account to access the portal.
+    </p>
+    <div style="display:flex;gap:15px; margin-bottom: 30px;">
+        <a href="{{ url_for('login_page') }}" class="btn btn-primary" style="padding:10px 20px;font-size:16px">Login to LMS</a>
+        <a href="{{ url_for('signup_page') }}" class="btn btn-outline" style="padding:10px 20px;font-size:16px">Create Account</a>
+    </div>
+
+
+</div>
+{% endblock %}

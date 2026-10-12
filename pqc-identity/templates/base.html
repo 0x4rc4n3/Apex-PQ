@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Identity{% endblock %} — Apex University</title>
+  <meta name="description" content="Apex University Decentralized Identity System">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pqc.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% if session.get('did') %}
+  <!-- ══ Authenticated shell ═══════════════════════════════════════════════ -->
+  <div class="app-shell">
+    <nav class="topbar">
+      <a class="topbar-brand" href="{{ url_for('index') }}" style="display:flex;align-items:center;text-decoration:none;font-weight:800;font-size:18px;color:var(--text-heading)">
+        <img src="{{ url_for('static', filename='logo.svg') }}" style="width:26px; height:26px; margin-right:9px; display:inline-block;" alt="Apex University">
+        Apex University
+      </a>
+      <div class="topbar-nav">
+        <a class="topbar-nav-link {% if request.endpoint in ['student_dashboard','admin_dashboard'] %}active{% endif %}"
+           href="{{ url_for('index') }}">Dashboard</a>
+        <a class="topbar-nav-link {% if request.endpoint=='verify_page' %}active{% endif %}"
+           href="{{ url_for('verify_page') }}">Verify</a>
+        <a class="topbar-nav-link {% if request.endpoint=='blockchain_page' %}active{% endif %}"
+           href="{{ url_for('blockchain_page') }}">Blockchain</a>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-user">
+        <div class="user-avatar">{{ session.full_name[0]|upper if session.full_name else '?' }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ session.full_name }}</div>
+          <div class="user-sub">
+            {% if session.role == 'admin' %}
+              <span class="badge badge-admin" style="padding:1px 7px;font-size:12px">Admin</span>
+            {% else %}
+              {{ session.email.split('@')[0] }}
+            {% endif %}
+          </div>
+        </div>
+        <form action="{{ url_for('logout') }}" method="post">
+          <button type="submit" class="btn-logout">Sign Out</button>
+        </form>
+      </div>
+    </nav>
+
+    <aside class="sidebar">
+      {% if session.role == 'admin' %}
+        <div class="nav-section-label">Management</div>
+        <a class="nav-link {% if request.endpoint=='admin_dashboard' %}active{% endif %}"
+           href="{{ url_for('admin_dashboard') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('admin_dashboard') }}#requests">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg> Signup Requests</a>
+        <a class="nav-link" href="{{ url_for('admin_dashboard') }}#users">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Registered Users</a>
+        <div class="nav-section-label" style="margin-top:12px">Tools</div>
+        <a class="nav-link {% if request.endpoint=='verify_page' %}active{% endif %}"
+           href="{{ url_for('verify_page') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg> Verify Identity</a>
+        <a class="nav-link {% if request.endpoint=='blockchain_page' %}active{% endif %}"
+           href="{{ url_for('blockchain_page') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><polygon points="12 2 2 7 2 17 12 22 22 17 22 7 12 2"></polygon><polyline points="2 7 12 12 22 7"></polyline><polyline points="12 22 12 12"></polyline></svg> Blockchain</a>
+        <a class="nav-link {% if request.endpoint=='admin_logs' %}active{% endif %}" href="{{ url_for('admin_logs') }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Identity & Audit Logs</a>
+        <a class="nav-link {% if request.endpoint=='info_page' %}active{% endif %}"
+           href="{{ url_for('info_page') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg> System Info</a>
+      {% else %}
+        <div class="nav-section-label">Learning</div>
+        <a class="nav-link {% if request.endpoint=='student_dashboard' %}active{% endif %}"
+            href="{{ url_for('student_dashboard') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('student_dashboard') }}#my-courses"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> My Courses</a>
+        <a class="nav-link" href="{{ url_for('student_dashboard') }}#evaluations"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Assignments</a>
+        <a class="nav-link" href="{{ url_for('student_dashboard') }}#certificates"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg> Certificates</a>
+        <div class="nav-section-label" style="margin-top:12px">Identity</div>
+        <a class="nav-link {% if request.endpoint=='verify_page' %}active{% endif %}"
+            href="{{ url_for('verify_page') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg> Verify Identity</a>
+        <a class="nav-link {% if request.endpoint=='blockchain_page' %}active{% endif %}"
+            href="{{ url_for('blockchain_page') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><polygon points="12 2 2 7 2 17 12 22 22 17 22 7 12 2"></polygon><polyline points="2 7 12 12 22 7"></polyline><polyline points="12 22 12 12"></polyline></svg> Blockchain</a>
+        <a class="nav-link {% if request.endpoint=='info_page' %}active{% endif %}"
+            href="{{ url_for('info_page') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:10px;opacity:0.75"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg> System Info</a>
+      {% endif %}
+    </aside>
+
+    <!-- Content rendered here for authenticated users -->
+    <main class="main-content" id="main-content">
+      <div class="nav-back-row">
+        <button type="button" class="btn-consistent-back" onclick="appNavigateBack()" aria-label="Go Back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          <span>Back</span>
+        </button>
+      </div>
+      <div class="main-content-inner">
+        {% block auth_shell %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  {% else %}
+  <!-- ══ Public layout (unauthenticated) ══════════════════════════════════ -->
+  <div class="public-shell">
+    <nav class="pub-nav">
+      <a class="pub-brand" href="{{ url_for('login_page') }}" style="display:flex;align-items:center;text-decoration:none;font-weight:800;font-size:20px;color:var(--text-heading)">
+        <img src="{{ url_for('static', filename='logo.svg') }}" style="width:30px; height:30px; margin-right:10px; display:inline-block;" alt="Apex University">
+        Apex University
+      </a>
+      <div class="pub-nav-links">
+        {% if request.endpoint == 'signup_page' or request.endpoint == 'pending_page' %}
+        <a class="pub-btn" href="{{ url_for('login_page') }}">Sign In →</a>
+        {% elif request.endpoint == 'login_page' %}
+        <a class="pub-btn" href="{{ url_for('signup_page') }}">Create Account →</a>
+        {% else %}
+        <a class="pub-btn" href="{{ url_for('login_page') }}">Sign In →</a>
+        {% endif %}
+      </div>
+    </nav>
+
+    <!-- auth_page: login/signup (full-bleed, no padding) -->
+    {% block auth_page %}{% endblock %}
+
+    <!-- pub_content: verify/blockchain (padded content area) -->
+    {% if self.pub_content() %}
+    <div class="pub-content-wrap">
+      <div class="nav-back-row">
+        <button type="button" class="btn-consistent-back" onclick="appNavigateBack()" aria-label="Go Back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          <span>Back</span>
+        </button>
+      </div>
+      <div class="pub-content-inner">
+        {% block pub_content %}{% endblock %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <script src="{{ url_for('static', filename='js/wallet.js') }}"></script>
+  {% block scripts %}{% endblock %}
+  <script>
+    function appNavigateBack() {
+      // Navigate to previous page if within the same app, otherwise fallback to home
+      if (window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1) {
+        window.history.back();
+      } else {
+        window.location.href = "{{ url_for('index') }}";
+      }
+    }
+
+    /**
+     * Systemic Copy Utility with visual feedback
+     */
+    async function copyToClipboard(text, btn) {
+      try {
+        await navigator.clipboard.writeText(text);
+        const originalHtml = btn.innerHTML;
+        btn.classList.add('copied');
+        const isIconOnly = btn.classList.contains('icon-only') || !btn.textContent.trim().toLowerCase().includes('copy');
+        if (isIconOnly) {
+          btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        } else {
+          btn.innerHTML = '✓ Copied';
+        }
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = originalHtml;
+        }, 1500);
+      } catch (err) {
+        console.error('Failed to copy: ', err);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+
+{% block auth_shell %}
+<div class="page-container" style="width: 100%; animation: fadeIn 0.4s ease-out;">
+  <!-- DID identity strip -->
+  <div class="did-strip">
+    <span class="did-strip-icon" style="display:grid;place-items:center">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary, #5b6cf9)"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="9" cy="10" r="2"></circle><line x1="15" y1="8" x2="17" y2="8"></line><line x1="15" y1="12" x2="17" y2="12"></line><line x1="7" y1="16" x2="17" y2="16"></line></svg>
+    </span>
+    <div style="flex:1;min-width:0">
+      <div class="did-strip-label">Verified University Identity</div>
+      <div class="crypto-field" style="margin-top:4px; max-width:100%">
+        <div class="crypto-field-text">{{ user.did if user else session.get('did') }}</div>
+        <button class="crypto-copy-btn icon-only" onclick="copyToClipboard('{{ user.did if user else session.get('did') }}', this)" title="Copy DID" aria-label="Copy DID">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
+    </div>
+    <span class="badge badge-approved">Active</span>
+  </div>
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Welcome back, {{ ((user.full_name if user and user.full_name else session.get('full_name', 'Student')).split())[0] }}</h1>
+      <p class="page-subtitle">{{ user.email if user and user.email else session.get('email', '') }} · Student ID: {{ (user.student_id if user and user.student_id else (user.email.split('@')[0] if user and user.email else 'N/A')) }}</p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Courses Enrolled</div>
+      <div class="stat-value">4</div>
+      <div class="stat-sub">2 in progress</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Lessons Completed</div>
+      <div class="stat-value">31</div>
+      <div class="stat-sub">of 88 total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Assignments</div>
+      <div class="stat-value">3</div>
+      <div class="stat-sub">due this week</div>
+    </div>
+    <div class="stat-card" id="certificates">
+      <div class="stat-label">Certificates</div>
+      <div class="stat-value">1</div>
+      <div class="stat-sub">Fundamentals</div>
+    </div>
+  </div>
+
+  <!-- My Courses -->
+  <div class="card" style="margin-bottom:24px" id="my-courses">
+    <div class="card-header">
+      My Courses
+      <a href="#my-courses" class="btn btn-outline btn-sm">All Active Courses</a>
+    </div>
+    <div class="card-body">
+      <div class="course-cards-parent">
+        <div class="course-card">
+          <div class="course-card-cover">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          <div class="course-card-body">
+            <div class="course-card-title">Post-Quantum Cryptography</div>
+            <div class="course-card-meta">12 lessons · Dr. Chen</div>
+            <div class="course-progress"><div class="course-progress-fill" style="width:65%"></div></div>
+            <div style="font-size:13px;color:var(--text-faint);margin-top:8px">65% complete</div>
+          </div>
+        </div>
+
+        <div class="course-card">
+          <div class="course-card-cover">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          </div>
+          <div class="course-card-body">
+            <div class="course-card-title">Blockchain &amp; Distributed Ledgers</div>
+            <div class="course-card-meta">8 lessons · Prof. Kim</div>
+            <div class="course-progress"><div class="course-progress-fill" style="width:40%"></div></div>
+            <div style="font-size:13px;color:var(--text-faint);margin-top:8px">40% complete</div>
+          </div>
+        </div>
+
+        <div class="course-card">
+          <div class="course-card-cover">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#10b981"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </div>
+          <div class="course-card-body">
+            <div class="course-card-title">Lattice-Based Cryptography</div>
+            <div class="course-card-meta">10 lessons · Dr. Patel</div>
+            <div class="course-progress"><div class="course-progress-fill" style="width:20%"></div></div>
+            <div style="font-size:13px;color:var(--text-faint);margin-top:8px">20% complete</div>
+          </div>
+        </div>
+
+        <div class="course-card">
+          <div class="course-card-cover">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#f59e0b"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </div>
+          <div class="course-card-body">
+            <div class="course-card-title">Zero-Knowledge Proofs</div>
+            <div class="course-card-meta">6 lessons · Prof. Rao</div>
+            <div class="course-progress"><div class="course-progress-fill" style="width:0%"></div></div>
+            <div style="font-size:13px;color:var(--text-faint);margin-top:8px">0% complete</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Academic Services / Quick Links -->
+  <div class="card" style="margin-bottom:24px" id="academic-services">
+    <div class="card-header">Academic Services</div>
+    <div class="card-body" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; padding:20px;">
+      <div class="academic-service-card" onclick="alert('Roll No Slip: Verified with your Apex QuantumID. Status: Active.')">
+        <div style="display:grid;place-items:center;color:var(--primary)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:14px;">Roll No Slip</div>
+          <div style="font-size:12px; color:var(--text-faint);">Portal Service</div>
+        </div>
+      </div>
+
+      <div class="academic-service-card" onclick="alert('Academic Transcript: Verified with your Apex QuantumID. Status: Active.')">
+        <div style="display:grid;place-items:center;color:var(--accent)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:14px;">Academic Transcript</div>
+          <div style="font-size:12px; color:var(--text-faint);">Portal Service</div>
+        </div>
+      </div>
+
+      <div class="academic-service-card" onclick="alert('Plan of Study: Verified with your Apex QuantumID. Status: Active.')">
+        <div style="display:grid;place-items:center;color:#10b981">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:14px;">Plan of Study</div>
+          <div style="font-size:12px; color:var(--text-faint);">Portal Service</div>
+        </div>
+      </div>
+
+      <div class="academic-service-card" onclick="alert('Current Enrollments: Verified with your Apex QuantumID. Status: Active.')">
+        <div style="display:grid;place-items:center;color:#8b5cf6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:14px;">Current Enrollments</div>
+          <div style="font-size:12px; color:var(--text-faint);">Portal Service</div>
+        </div>
+      </div>
+
+      <div class="academic-service-card" onclick="alert('Course Registration: Verified with your Apex QuantumID. Status: Active.')">
+        <div style="display:grid;place-items:center;color:#f59e0b">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:14px;">Course Registration</div>
+          <div style="font-size:12px; color:var(--text-faint);">Portal Service</div>
+        </div>
+      </div>
+
+      <div class="academic-service-card" onclick="alert('Graduation Clearance: Verified with your Apex QuantumID. Status: Active.')">
+        <div style="display:grid;place-items:center;color:#06b6d4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:14px;">Graduation Clearance</div>
+          <div style="font-size:12px; color:var(--text-faint);">Portal Service</div>
+        </div>
+      </div>
+
+      <div class="academic-service-card" onclick="alert('Medical Profile: Verified with your Apex QuantumID. Status: Active.')">
+        <div style="display:grid;place-items:center;color:#ef4444">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:14px;">Medical Profile</div>
+          <div style="font-size:12px; color:var(--text-faint);">Portal Service</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming Evaluations & Activity -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:20px" id="evaluations">
+    <div class="card">
+      <div class="card-header">Upcoming Evaluations</div>
+      <div class="card-body" style="padding:0">
+        {% set evals = [
+          {"title": "PQC Midterm Exam", "date": "Apr 18", "course": "Post-Quantum Cryptography"},
+          {"title": "Blockchain Assignment 2", "date": "Apr 21", "course": "Distributed Ledgers"},
+          {"title": "ZKP Quiz", "date": "Apr 25", "course": "Zero-Knowledge Proofs"},
+        ] %}
+        {% for ev in evals %}
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;gap:14px;align-items:center">
+          <div style="text-align:center;min-width:44px">
+            <div style="font-size:12px;color:var(--text-faint)">{{ ev.date.split()[0] }}</div>
+            <div style="font-size:19px;font-weight:700;color:var(--text-heading)">{{ ev.date.split()[1] }}</div>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600">{{ ev.title }}</div>
+            <div style="font-size:13px;color:var(--text-muted)">{{ ev.course }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Recent Identity Activity</div>
+      <div class="card-body" style="padding:0">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;background:var(--primary-light);border-radius:50%;display:grid;place-items:center;color:#fff;flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <div>
+            <div style="font-size:13.5px;font-weight:500">Identity anchored to blockchain ledger</div>
+            <div style="font-size:12px;color:var(--text-faint)">Verified</div>
+          </div>
+        </div>
+
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;background:var(--primary-light);border-radius:50%;display:grid;place-items:center;color:#fff;flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+          </div>
+          <div>
+            <div style="font-size:13.5px;font-weight:500">Certificate issued: PQC Fundamentals</div>
+            <div style="font-size:12px;color:var(--text-faint)">1d ago</div>
+          </div>
+        </div>
+
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;background:var(--primary-light);border-radius:50%;display:grid;place-items:center;color:#fff;flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </div>
+          <div>
+            <div style="font-size:13.5px;font-weight:500">Assignment submitted: Lattice Cryptography</div>
+            <div style="font-size:12px;color:var(--text-faint)">3d ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+services:
+  apex-portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apex-identity-portal
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - FLASK_ENV=production
+      - SECRET_KEY=b3a5b8214fbc9048a1c8f192b73a38-apex-pqc
+    volumes:
+      # Persist SQLite databases and BFT blockchain ledgers across container lifecycles
+      - ./pqc-identity/db:/app/db
+      - ./pqc-identity/wallet-extension/seeds.json:/app/wallet-extension/seeds.json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

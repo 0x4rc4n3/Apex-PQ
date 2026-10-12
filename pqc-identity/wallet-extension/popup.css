@@ -1,0 +1,390 @@
+/* ─────────────────────────────────────────────────────────────
+   Apex Identity Wallet Extension — Minimal, Soft Dark Theme
+   Inspired by Proton Pass / 1Password design language
+   ───────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --primary:       #6366f1;
+  --primary-hover: #4f46e5;
+  --accent:        #06b6d4;
+  --success:       #10b981;
+  --danger:        #ef4444;
+  --bg:            #0d1117;
+  --surface:       #161b22;
+  --surface-2:     #21262d;
+  --border:        rgba(255, 255, 255, 0.08);
+  --border-focus:  rgba(99, 102, 241, 0.5);
+  --text:          #f0f6fc;
+  --text-muted:    #8b949e;
+  --text-faint:    #6e7681;
+  --radius:        10px;
+  --radius-sm:     6px;
+  --font-mono:     'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 350px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  line-height: 1.4;
+  user-select: none;
+}
+
+/* ── Minimal Header ─────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, var(--primary), #8b5cf6);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+.brand-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.account-select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  transition: border-color .15s ease;
+  max-width: 130px;
+}
+.account-select:focus { border-color: var(--border-focus); }
+
+/* ── Content Container ──────────────────────────────────────── */
+.content-container {
+  padding: 16px;
+}
+
+/* ── Account Card ───────────────────────────────────────────── */
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.account-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.account-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-remove {
+  background: none;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.btn-remove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* ── Minimal DID Card ───────────────────────────────────────── */
+.did-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #090d16;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.did-text {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-copy {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all .15s ease;
+  flex-shrink: 0;
+}
+.btn-copy:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.btn-copy.copied {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+/* ── Action Buttons ─────────────────────────────────────────── */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+  width: 100%;
+  font-family: inherit;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35);
+}
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.btn-outline:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+/* ── Key Reveal Dropdown ────────────────────────────────────── */
+.key-reveal {
+  display: none;
+  background: #090d16;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-top: 10px;
+  animation: fadeIn 0.18s ease;
+}
+.key-reveal.show { display: block; }
+.key-reveal-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 5px;
+}
+.key-reveal-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #f87171;
+  word-break: break-all;
+  max-height: 80px;
+  overflow-y: auto;
+  line-height: 1.4;
+}
+
+/* ── Overlay Modals ─────────────────────────────────────────── */
+.wallet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 17, 23, 0.88);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.pin-card, .confirm-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  width: 100%;
+  max-width: 290px;
+  text-align: center;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+.pin-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: rgba(91, 108, 249, 0.12);
+  border: 1px solid rgba(91, 108, 249, 0.25);
+  display: grid;
+  place-items: center;
+}
+
+.pin-card h3, .confirm-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.pin-card p, .confirm-card p {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.pin-card input {
+  width: 100%;
+  padding: 10px;
+  background: #090d16;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 6px;
+  margin-bottom: 12px;
+  outline: none;
+}
+.pin-card input:focus { border-color: var(--primary); }
+
+.pin-alert {
+  display: none;
+  font-size: 12px;
+  color: #f87171;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Toast ──────────────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  background: var(--surface-2);
+  border: 1px solid var(--primary);
+  color: #fff;
+  padding: 7px 14px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: all .2s ease;
+  z-index: 200;
+  white-space: nowrap;
+}
+#toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

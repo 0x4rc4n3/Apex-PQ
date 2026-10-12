@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% block title %}Create Account{% endblock %}
+
+{% block auth_page %}
+<div class="auth-page">
+  <div class="auth-left">
+    <div class="auth-illustration">
+      <h1>Create Your<br>University Account</h1>
+      <p>We generate a secure cryptographic keypair for you. Your private key lives only in your browser.</p>
+
+      <div style="text-align:left;margin-top:28px">
+        {% for step in [
+          ('1', 'Generate Keypair',  'Natively generate your quantum-resistant identity keys.'),
+          ('2', 'Save to Wallet',    'Store your keys in the browser extension for instant login.'),
+          ('3', 'Admin Approval',    'Identity is submitted to the ledger for verification.'),
+        ] %}
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px">
+          <div style="width:30px;height:30px;background:var(--primary-light);border:1px solid var(--border-active);border-radius:50%;display:grid;place-items:center;flex-shrink:0;font-weight:700;color:var(--primary);font-size:12px">{{ step[0] }}</div>
+          <div>
+            <div style="font-weight:600;margin-bottom:2px">{{ step[1] }}</div>
+            <div style="font-size:12px;color:var(--text-muted)">{{ step[2] }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-card-header" style="margin-bottom:16px">
+      <div class="logo" style="margin-bottom:16px;display:flex;align-items:center">
+        <img src="{{ url_for('static', filename='logo.svg') }}" style="width:30px; height:30px; margin-right:10px; display:inline-block;" alt="Apex University">
+        Apex University
+      </div>
+      <h2 style="font-size:20px">Create Account</h2>
+    </div>
+
+    <div style="width:100%">
+      <!-- Step 1: Keygen -->
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint);margin-bottom:8px">
+          Step 1 — Identity Keys
+        </div>
+        <div id="keygen-status" style="display:none;margin-bottom:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div style="font-family:monospace;font-size:13px;color:var(--accent);background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:6px 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="DID">
+              DID: <span id="did-preview"></span>
+            </div>
+            <div style="font-family:monospace;font-size:13px;color:var(--text-muted);background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:6px 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="Public Key">
+              PK: <span id="pk-preview"></span>
+            </div>
+          </div>
+          <div style="font-family:monospace;font-size:13px;color:#f87171;background:#0d1117;border:1px solid #7f1d1d;border-radius:6px;padding:6px 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="Private Key">
+            SK: <span id="sk-preview"></span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" id="btn-generate">
+          Generate Keypair
+        </button>
+      </div>
+
+      <!-- Step 2: Form fields -->
+      <div id="form-fields" style="display:none">
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="form-label" for="full-name" style="margin-bottom:6px">Full Name</label>
+          <input class="form-control" id="full-name" type="text" placeholder="Full Name" required style="padding:10px 14px">
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="form-label" style="margin-bottom:6px">Roll Number / Student ID</label>
+          <input class="form-control" id="roll-no" type="text" placeholder="Roll Number / Student ID" style="padding:10px 14px">
+          <div style="margin-top:4px;font-size:12px;color:var(--text-faint)">
+            Email: <span id="email-derive" style="color:var(--accent);font-family:monospace">…@apex.edu</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="alert-signup" class="alert"></div>
+
+      <button class="btn btn-primary btn-block" id="btn-submit" style="display:none">
+        Submit for Approval
+      </button>
+
+      <p style="margin-top:16px;font-size:12px;color:var(--text-faint);text-align:center">
+        Already enrolled? <a href="{{ url_for('login_page') }}">Sign In</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Wallet store popup -->
+<div class="wallet-overlay" id="wallet-store-overlay" style="display:none">
+  <div class="wallet-popup">
+    <div class="wallet-popup-header">
+      <div class="wallet-popup-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary, #5b6cf9)">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <div>
+        <h3>Save to Extension</h3>
+        <p>Would you like to save this identity to your browser extension?</p>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint);margin-bottom:5px">Your Identifier (DID)</div>
+      <div class="did-display" id="popup-did" style="font-size:12.5px;max-height:54px;overflow:hidden"></div>
+    </div>
+
+    <div id="alert-store" class="alert"></div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-primary" id="btn-store-confirm" style="flex:1">Yes, Save to Extension</button>
+      <button class="btn btn-outline" id="btn-store-skip">Skip</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block auth_shell %}{{ self.auth_page() }}{% endblock %}
+
+{% block scripts %}
+<script>
+let generatedIdentity = null;
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.className = "alert show alert-" + type;
+}
+function clearAlert(id) { document.getElementById(id).className = "alert"; }
+
+// Roll no → email derive
+document.getElementById("roll-no").addEventListener("input", e => {
+  const rn = e.target.value.trim().toLowerCase();
+  document.getElementById("email-derive").textContent = rn ? `${rn}@apex.edu` : "…@apex.edu";
+});
+
+// Generate keypair
+document.getElementById("btn-generate").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-generate");
+  btn.disabled = true;
+  btn.innerHTML = "<span class='spinner'></span>&nbsp;Generating…";
+  clearAlert("alert-signup");
+  try {
+    const resp = await fetch("/api/keygen", { method: "POST" });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+
+    generatedIdentity = data;
+
+    // Show Full Previews
+    document.getElementById("did-preview").textContent = data.did;
+    document.getElementById("pk-preview").textContent = data.pubkey_hex;
+    document.getElementById("sk-preview").textContent = data.privkey_hex;
+    
+    document.getElementById("keygen-status").style.display = "block";
+    document.getElementById("form-fields").style.display   = "block";
+    document.getElementById("btn-submit").style.display    = "block";
+    btn.innerHTML = "Re-generate Keypair";
+    btn.disabled  = false;
+  } catch(e) {
+    showAlert("alert-signup", "Generation failed: " + e.message, "error");
+    btn.innerHTML = "Generate Keypair";
+    btn.disabled  = false;
+  }
+});
+
+// Store in wallet
+document.getElementById("btn-store-confirm").addEventListener("click", async () => {
+  clearAlert("alert-store");
+  try {
+    const full_name = document.getElementById("full-name").value.trim();
+    const roll_no   = document.getElementById("roll-no").value.trim();
+
+    // 1. Dispatch custom event for content script
+    window.dispatchEvent(new CustomEvent("PQC_IDENTITY_GENERATED", {
+      detail: {
+        full_name,
+        roll_no,
+        did: generatedIdentity.did,
+        pubkey_hex: generatedIdentity.pubkey_hex,
+        privkey_hex: generatedIdentity.privkey_hex
+      }
+    }));
+
+    // 2. Sync to seeds.json via backend API
+    try {
+      const seedsResp = await fetch("/api/wallet/seeds");
+      let seeds = seedsResp.ok ? await seedsResp.json() : [];
+      if (!Array.isArray(seeds)) seeds = [];
+      if (!seeds.some(s => s.did === generatedIdentity.did)) {
+        seeds.push({
+          name: full_name,
+          email: `${roll_no}@apex.edu`,
+          roll_no: roll_no,
+          role: "student",
+          did: generatedIdentity.did,
+          pubkey_hex: generatedIdentity.pubkey_hex,
+          privkey_hex: generatedIdentity.privkey_hex
+        });
+        await fetch("/api/wallet/seeds", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(seeds)
+        });
+      }
+    } catch(err) {
+      console.warn("Seeds sync fallback:", err);
+    }
+
+    // 3. LocalStorage backup
+    try {
+      let localAccs = JSON.parse(localStorage.getItem("quantum_wallet_accounts") || "[]");
+      localAccs.push({
+        name: full_name,
+        email: `${roll_no}@apex.edu`,
+        roll_no: roll_no,
+        role: "student",
+        did: generatedIdentity.did,
+        pubkey_hex: generatedIdentity.pubkey_hex,
+        privkey_hex: generatedIdentity.privkey_hex
+      });
+      localStorage.setItem("quantum_wallet_accounts", JSON.stringify(localAccs));
+    } catch(e) {}
+
+    showAlert("alert-store", "✓ Saved to Wallet Extension! Redirecting…", "success");
+    setTimeout(() => {
+      window.location.href = "/pending?did=" + encodeURIComponent(generatedIdentity.did);
+    }, 1000);
+  } catch(e) {
+    showAlert("alert-store", e.message, "error");
+  }
+});
+
+document.getElementById("btn-store-skip").addEventListener("click", () => {
+  window.location.href = "/pending?did=" + encodeURIComponent(generatedIdentity.did);
+});
+
+// Submit signup
+document.getElementById("btn-submit").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-submit");
+  clearAlert("alert-signup");
+  if (!generatedIdentity) { showAlert("alert-signup","Generate a keypair first.","error"); return; }
+
+  const full_name = document.getElementById("full-name").value.trim();
+  const roll_no   = document.getElementById("roll-no").value.trim();
+  
+  if (!full_name) { showAlert("alert-signup", "Enter full name.", "error"); return; }
+  if (!roll_no || roll_no.length < 2) { showAlert("alert-signup", "Enter valid roll number / ID.", "error"); return; }
+
+  btn.disabled  = true;
+  btn.innerHTML = "<span class='spinner'></span>&nbsp;Submitting…";
+  try {
+    const resp = await fetch("/api/signup", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name, roll_no,
+        did:        generatedIdentity.did,
+        pubkey_hex: generatedIdentity.pubkey_hex,
+      })
+    });
+    const data = await resp.json();
+    if (!data.ok) { showAlert("alert-signup", data.error, "error"); return; }
+
+    showAlert("alert-signup","✓ Submitted — awaiting approval…","success");
+    document.getElementById("popup-did").textContent = generatedIdentity.did;
+    const overlay = document.getElementById("wallet-store-overlay");
+    overlay.style.display = "flex";
+    overlay.classList.add("show");
+  } catch(e) {
+    showAlert("alert-signup", e.message, "error");
+  } finally {
+    btn.disabled  = false;
+    btn.innerHTML = "Submit for Approval";
+  }
+});
+</script>
+{% endblock %}
