@@ -96,6 +96,26 @@ class Tests(unittest.TestCase):
         self.assertTrue(admin.post("/api/admin/revoke/" + did).get_json()["ok"])
         self.assertEqual(s.get("/dashboard").status_code, 302)                    # revoked -> kicked out
 
+    def test_bootstrap_key_is_protected_and_single_use(self):
+        from unittest.mock import patch
+        path = os.path.join(_TMP, "bootstrap-once.json")
+        key_data = {"role": "admin", "privkey_hex": "test-private-material"}
+        with patch.object(appmod, "ADMIN_SECRET_FILE", path):
+            with patch.dict(os.environ, {"APEX_BOOTSTRAP_TOKEN": ""}):
+                self.assertEqual(self.c.get("/api/bootstrap/admin-key").status_code, 404)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(key_data, f)
+            token = "t" * 48
+            with patch.dict(os.environ, {"APEX_BOOTSTRAP_TOKEN": token}):
+                self.assertEqual(self.c.get("/api/bootstrap/admin-key").status_code, 403)
+                headers = {"Authorization": "Bearer " + token}
+                response = self.c.get("/api/bootstrap/admin-key", headers=headers)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.get_json(), key_data)
+                self.assertEqual(response.headers.get("Cache-Control"), "no-store, private")
+                self.assertFalse(os.path.exists(path))
+                self.assertEqual(self.c.get("/api/bootstrap/admin-key", headers=headers).status_code, 404)
+
     def test_pages_render_for_admin(self):
         admin = appmod.app.test_client()
         self.assertTrue(login(admin, ADMIN)[0].get_json()["ok"])

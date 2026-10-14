@@ -68,6 +68,10 @@ Even in demo mode the server never uses a key of its own: `/api/sign` only signs
 | `HOST` / `PORT` | `127.0.0.1` / `8080` | Bind address |
 | `COOKIE_SECURE`, `APEX_TRUST_PROXY` | off | Set both behind an HTTPS reverse proxy |
 | `APEX_DEBUG` | off | Flask debugger (never enable on a network) |
+| `APEX_BOOTSTRAP_TOKEN` | unset | Optional bearer token for one-time hosted admin-key retrieval; endpoint is disabled when unset |
+
+### Render Free prototype
+For a public prototype, keep `APEX_DEMO_MODE=0`, set `COOKIE_SECURE=1` and `APEX_TRUST_PROXY=1`, and configure a long random `APEX_BOOTSTRAP_TOKEN` (for example, generate one with `openssl rand -hex 32`). After the first deploy, retrieve the admin wallet JSON exactly once over HTTPS with `GET /api/bootstrap/admin-key` and an `Authorization: Bearer <token>` header. The endpoint deletes the private key file after returning it and sends no-store cache headers. Import the returned JSON into the wallet and keep it private. **Render Free has ephemeral service storage:** the SQLite registry, ledger, and generated admin identity can be lost on restart or redeploy. This configuration is for demos only, not real identity records.
 
 ## Architecture
 

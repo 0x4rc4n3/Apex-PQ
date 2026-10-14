@@ -182,7 +182,7 @@ def security_headers(resp):
     )
     resp.headers["Content-Security-Policy"] = csp
     if request.path.startswith("/api/"):
-        resp.headers["Cache-Control"] = "no-store"
+        resp.headers.setdefault("Cache-Control", "no-store")
     return resp
 
 
@@ -654,6 +654,31 @@ def api_verify_identity():
     blk = get_block_by_did(user["did"])
     return jsonify({"ok": True, "found": True, "name": user["full_name"], "role": user["role"],
                     "did": user["did"], "on_chain": blk is not None, "block": blk})
+
+
+@app.route("/api/bootstrap/admin-key", methods=["GET"])
+def bootstrap_admin_key():
+    """Return and erase the bootstrap wallet file once, only with a deployment secret."""
+    token = os.environ.get("APEX_BOOTSTRAP_TOKEN", "")
+    if not token:
+        return jsonify({"ok": False, "error": "Not found"}), 404
+    supplied = request.headers.get("Authorization", "")
+    if not secrets.compare_digest(supplied, f"Bearer {token}"):
+        return jsonify({"ok": False, "error": "Unauthorized"}), 403
+    with _admin_lock:
+        if not os.path.isfile(ADMIN_SECRET_FILE):
+            return jsonify({"ok": False, "error": "Bootstrap key already retrieved"}), 404
+        try:
+            with open(ADMIN_SECRET_FILE, encoding="utf-8") as f:
+                key_data = json.load(f)
+            os.remove(ADMIN_SECRET_FILE)
+        except (OSError, json.JSONDecodeError):
+            app.logger.exception("Unable to read bootstrap key")
+            return jsonify({"ok": False, "error": "Bootstrap key unavailable"}), 500
+    response = jsonify(key_data)
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 # ── Entrypoint ───────────────────────────────────────────────────────────────
