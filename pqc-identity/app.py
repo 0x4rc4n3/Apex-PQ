@@ -230,12 +230,14 @@ def truncate_did(did, head=20, tail=8):
 
 ADMIN_PUBLIC_FILE = os.path.join(DATA_DIR, "admin_public.json")
 ADMIN_SECRET_FILE = os.path.join(DATA_DIR, "ADMIN_KEY_IMPORT_THEN_DELETE.json")
+DEMO_ACCOUNTS_FILE = os.path.join(DATA_DIR, "demo_wallet_accounts.json")
 
 
 def bootstrap():
     init_db()
     ledger.init_ledger()
     _ensure_admin()
+    _ensure_demo_accounts()
 
 
 def _write_private(path, obj):
@@ -271,6 +273,35 @@ def _ensure_admin():
           f"  DID : {did}\n"
           f"  Key : {ADMIN_SECRET_FILE}\n"
           f"  Import it into the Apex wallet, then DELETE that file.\n")
+
+
+def _ensure_demo_accounts():
+    """Create the shared sample roster once; private keys are demo-only material."""
+    if not app.config["DEMO_MODE"]:
+        return
+    if os.path.exists(DEMO_ACCOUNTS_FILE):
+        return
+    try:
+        with open(ADMIN_SECRET_FILE, encoding="utf-8") as f:
+            admin = json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError("Demo account seeding needs the initial admin key file") from exc
+    accounts = [{**admin, "demo_seed": True}]
+    for i, name in enumerate(("Student One", "Student Two", "Student Three"), start=1):
+        roll_no = f"student{i}"
+        did, pubkey_hex, privkey_hex = generate_keypair()
+        email = roll_to_email(roll_no)
+        create_user(did, email, name, roll_no, pubkey_hex, role="student")
+        accounts.append({"name": name, "full_name": name, "roll_no": roll_no,
+                         "email": email, "role": "student", "did": did,
+                         "pubkey_hex": pubkey_hex, "privkey_hex": privkey_hex,
+                         "demo_seed": True})
+        try:
+            add_block({"action": "register_demo_student", "did": did, "email": email,
+                       "name": name, "pubkey": pubkey_hex[:16] + "…"})
+        except Exception as e:
+            print(f"[Ledger] Demo student anchor failed: {e}")
+    _write_private(DEMO_ACCOUNTS_FILE, accounts)
 
 
 # ── Auth helpers ─────────────────────────────────────────────────────────────
@@ -450,6 +481,30 @@ def api_sign():
     except (ValueError, RuntimeError):
         return jsonify({"ok": False, "error": "Signing failed (bad key?)."}), 400
     return jsonify({"ok": True, "signature": sig})
+
+
+@app.route("/api/demo/accounts", methods=["GET"])
+@_demo_only
+@rate_limited("demo_accounts", 30, 60)
+def api_demo_accounts():
+    """Expose only the explicitly public demo roster to the demo wallet."""
+    try:
+        with open(DEMO_ACCOUNTS_FILE, encoding="utf-8") as f:
+            accounts = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        app.logger.exception("Demo account roster is unavailable")
+        return jsonify({"ok": False, "error": "Demo accounts are unavailable."}), 503
+    active = []
+    for account in accounts:
+        user = get_user_by_did(account["did"])
+        if user:
+            synced = dict(account)
+            synced.update(name=user["full_name"], full_name=user["full_name"],
+                          email=user["email"], roll_no=email_to_roll(user["email"]),
+                          role=user["role"])
+            active.append(synced)
+    return jsonify({"ok": True, "accounts": active,
+                    "notice": "Public demo identities. Never use these accounts or PIN for real data."})
 
 
 # ── API: signup / login ──────────────────────────────────────────────────────

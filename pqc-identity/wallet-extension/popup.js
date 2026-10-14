@@ -5,7 +5,7 @@
  * popup's memory while it is open.
  */
 const PBKDF2_ITERS = 600000;
-const MIN_PASS_LEN = 10;
+const DEMO_PIN = "12345";
 const enc = new TextEncoder(), dec = new TextDecoder();
 
 let LMS_URL = "http://localhost:8080";
@@ -50,16 +50,62 @@ async function openVault(vault, pass) {
   return { key, salt, data };
 }
 
+function isSupportedAppUrl(value) {
+  try {
+    const u = new URL(value);
+    return ["localhost:8080", "127.0.0.1:8080"].includes(u.host) ||
+      (u.protocol === "https:" && (u.hostname.endsWith(".onrender.com") ||
+        u.hostname.endsWith(".manus.computer")));
+  } catch { return false; }
+}
+async function resolveAppUrl() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !isSupportedAppUrl(tab.url)) return false;
+  LMS_URL = new URL(tab.url).origin;
+  return true;
+}
+async function fetchDemoAccounts() {
+  if (!await resolveAppUrl()) throw new Error("Open the Apex-PQ site, then reopen the wallet.");
+  const response = await fetch(`${LMS_URL}/api/demo/accounts`, { cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok || !Array.isArray(data.accounts) || !data.accounts.length)
+    throw new Error(data.error || "Could not sync demo accounts from this Apex-PQ site.");
+  return data.accounts.map(a => ({
+    name: a.name || a.full_name, roll_no: a.roll_no, email: a.email,
+    role: a.role === "admin" ? "admin" : "student", did: a.did,
+    pubkey_hex: a.pubkey_hex, privkey_hex: a.privkey_hex, demo_seed: true,
+  }));
+}
+async function syncDemoAccounts() {
+  const selectedRoll = currentAccount()?.roll_no;
+  const seeded = await fetchDemoAccounts();
+  const seededRolls = new Set(["admin", "student1", "student2", "student3"]);
+  accounts = accounts.filter(a => !a.demo_seed && !seededRolls.has(a.roll_no));
+  accounts = [...seeded, ...accounts];
+  const selectedIndex = accounts.findIndex(a => a.roll_no === selectedRoll);
+  currentIdx = selectedIndex >= 0 ? selectedIndex : Math.min(currentIdx, accounts.length - 1);
+}
+async function initializeDemoVault() {
+  const seeded = await fetchDemoAccounts();
+  accounts = seeded;
+  currentIdx = 0;
+  vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+  vaultKey = await deriveKey(DEMO_PIN, vaultSalt);
+  await saveVault();
+}
+
 // ── lock screen ───────────────────────────────────────────────────────────
 async function showLockScreen() {
-  const { vault, failCount = 0, lockUntil = 0 } = await store.get(["vault", "failCount", "lockUntil"]);
-  const setup = !vault;
-  $("pin-title").textContent = setup ? "Create wallet passphrase" : "Wallet Locked";
-  $("pin-sub").textContent = setup
-    ? `Choose a passphrase (min ${MIN_PASS_LEN} characters). It cannot be recovered.`
-    : "Enter your passphrase to unlock.";
-  $("ext-pin2").style.display = setup ? "block" : "none";
-  $("btn-pin-confirm").textContent = setup ? "Create Wallet" : "Unlock Wallet";
+  const { vault } = await store.get(["vault"]);
+  const state = await store.get(["failCount", "lockUntil"]);
+  let failCount = state.failCount || 0, lockUntil = state.lockUntil || 0;
+  $("pin-title").textContent = "Wallet PIN";
+  $("pin-sub").textContent = vault
+    ? "Enter the shared demo PIN to unlock: 12345"
+    : "Enter PIN 12345 to load and unlock the four demo accounts.";
+  $("ext-pin").placeholder = "5-digit PIN";
+  $("ext-pin2").style.display = "none";
+  $("btn-pin-confirm").textContent = "Unlock Wallet";
   $("pin-overlay").style.display = "flex";
   $("ext-pin").focus();
 
@@ -67,26 +113,32 @@ async function showLockScreen() {
     const alertEl = $("pin-alert"), pass = $("ext-pin").value;
     const fail = (m) => { alertEl.textContent = m; alertEl.style.display = "block"; };
     try {
-      if (setup) {
-        if (pass.length < MIN_PASS_LEN) return fail(`Use at least ${MIN_PASS_LEN} characters.`);
-        if (pass !== $("ext-pin2").value) return fail("Passphrases do not match.");
-        vaultSalt = crypto.getRandomValues(new Uint8Array(16));
-        vaultKey = await deriveKey(pass, vaultSalt);
-        accounts = []; currentIdx = 0;
+      const wait = lockUntil - Date.now();
+      if (wait > 0) return fail(`Too many attempts. Wait ${Math.ceil(wait / 1000)}s.`);
+      const wrongPin = async () => {
+        failCount += 1;
+        lockUntil = Date.now() + Math.min(2 ** failCount, 300) * 1000;
+        await store.set({ failCount, lockUntil });
+        return fail("Wrong PIN.");
+      };
+      if (!vault) {
+        if (pass !== DEMO_PIN) return wrongPin();
+        await initializeDemoVault();
       } else {
-        const wait = lockUntil - Date.now();
-        if (wait > 0) return fail(`Too many attempts. Wait ${Math.ceil(wait / 1000)}s.`);
-        try {
-          const { key, salt, data } = await openVault(vault, pass);
-          vaultKey = key; vaultSalt = salt;
-          accounts = data.accounts || []; currentIdx = data.currentIdx || 0;
-          await store.set({ failCount: 0, lockUntil: 0 });
-        } catch {
-          const n = failCount + 1;
-          await store.set({ failCount: n, lockUntil: Date.now() + Math.min(2 ** n, 300) * 1000 });
-          return fail("Wrong passphrase.");
-        }
+        let opened;
+        try { opened = await openVault(vault, pass); }
+        catch { return wrongPin(); }
+        vaultKey = opened.key; vaultSalt = opened.salt;
+        accounts = opened.data.accounts || []; currentIdx = opened.data.currentIdx || 0;
       }
+      await store.set({ failCount: 0, lockUntil: 0 });
+      // Existing vaults can be unlocked once with their old passphrase, then use the demo PIN.
+      if (pass !== DEMO_PIN) {
+        vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+        vaultKey = await deriveKey(DEMO_PIN, vaultSalt);
+      }
+      try { await syncDemoAccounts(); }
+      catch (e) { toast(`Account sync unavailable: ${e.message}`, 3000); }
       $("ext-pin").value = $("ext-pin2").value = "";
       await absorbPending();
       await saveVault();
@@ -144,7 +196,7 @@ async function detectPage() {
   detectedPage = null; detectedChallenge = null; signBtn.disabled = false; signBtn.textContent = "Sign & Login";
   if (!tab || !tab.url) return;
   let u; try { u = new URL(tab.url); } catch { return; }
-  if (!["localhost:8080", "127.0.0.1:8080"].includes(u.host)) return;
+  if (!isSupportedAppUrl(tab.url)) return;
   LMS_URL = u.origin;
   if (u.pathname.startsWith("/login")) {
     try {
@@ -181,6 +233,11 @@ $("btn-delete-acc").addEventListener("click", () => {
 });
 $("btn-cancel-delete").addEventListener("click", () => { $("confirm-overlay").style.display = "none"; });
 $("btn-confirm-delete").addEventListener("click", async () => {
+  if (currentAccount()?.role === "admin") {
+    $("confirm-overlay").style.display = "none";
+    toast("The administrator account cannot be removed");
+    return;
+  }
   accounts.splice(currentIdx, 1); currentIdx = Math.max(0, currentIdx - 1);
   await saveVault(); $("confirm-overlay").style.display = "none";
   toast("Identity removed"); startUI();

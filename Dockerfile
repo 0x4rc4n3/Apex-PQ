@@ -1,9 +1,9 @@
-# ── Stage 1: build liboqs (ML-DSA-44 only) from the vendored source ──────────
+# ── Stage 1: build liboqs (ML-DSA-44 only) from pinned upstream source ───────
 # Building from source avoids shipping a prebuilt binary tied to one glibc/OpenSSL/CPU.
 FROM python:3.12-slim-bookworm AS oqs-build
-RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build gcc g++ \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git cmake ninja-build gcc g++ \
     && rm -rf /var/lib/apt/lists/*
-COPY liboqs /src/liboqs
+RUN git clone --depth 1 --branch 0.16.0 https://github.com/open-quantum-safe/liboqs.git /src/liboqs
 RUN cmake -S /src/liboqs -B /build -GNinja \
         -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
         -DOQS_MINIMAL_BUILD="SIG_ml_dsa_44" -DOQS_USE_OPENSSL=OFF \

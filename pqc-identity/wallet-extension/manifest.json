@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Apex wallet",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Post-quantum (ML-DSA-44) identity wallet with a PIN-encrypted key vault",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["http://localhost:8080/*", "http://127.0.0.1:8080/*"],
+  "host_permissions": ["http://localhost:8080/*", "http://127.0.0.1:8080/*", "https://*.onrender.com/*", "https://*.manus.computer/*"],
   "background": { "service_worker": "background.js" },
   "action": {
     "default_popup": "popup.html",
@@ -13,7 +13,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://localhost:8080/*", "http://127.0.0.1:8080/*"],
+      "matches": ["http://localhost:8080/*", "http://127.0.0.1:8080/*", "https://*.onrender.com/*", "https://*.manus.computer/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

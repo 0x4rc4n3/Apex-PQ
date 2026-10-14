@@ -46,6 +46,40 @@ class Tests(unittest.TestCase):
         r2 = self.c.post("/api/sign", json={"did": r["did"], "challenge": r["challenge"]})
         self.assertEqual(r2.status_code, 400)           # no privkey -> refused, no admin fallback
 
+    def test_demo_roster_sync_and_login_for_all_four_accounts(self):
+        from unittest.mock import patch
+        response = self.c.get("/api/demo/accounts")
+        self.assertEqual(response.status_code, 200)
+        accounts = response.get_json()["accounts"]
+        self.assertEqual({a["roll_no"] for a in accounts}, {"admin", "student1", "student2", "student3"})
+        self.assertEqual(sum(a["role"] == "admin" for a in accounts), 1)
+        self.assertTrue(all(a["demo_seed"] for a in accounts))
+        with patch.object(appmod._limiter, "allow", return_value=True):
+            for account in accounts:
+                challenge = self.c.post("/api/challenge", json={"roll_no": account["roll_no"]}).get_json()
+                signed = self.c.post("/api/sign", json={"did": account["did"],
+                    "challenge": challenge["challenge"], "privkey_hex": account["privkey_hex"]}).get_json()
+                logged_in = self.c.post("/api/login", json={"did": account["did"],
+                    "challenge": challenge["challenge"], "signature": signed["signature"]})
+                self.assertEqual(logged_in.status_code, 200, account["roll_no"])
+                self.assertEqual(logged_in.get_json()["role"], account["role"])
+            admin = next(a for a in accounts if a["role"] == "admin")
+            admin_client = appmod.app.test_client()
+            self.assertTrue(login(admin_client, admin)[0].get_json()["ok"])
+            self.assertEqual(admin_client.post("/api/admin/revoke/" + admin["did"]).status_code, 400)
+            student = next(a for a in accounts if a["roll_no"] == "student1")
+            edited = admin_client.post("/api/admin/edit/" + student["did"], json={
+                "full_name": "Updated Student One", "email": "student1@apex.edu", "role": "student"})
+            self.assertEqual(edited.status_code, 200)
+            synced = self.c.get("/api/demo/accounts").get_json()["accounts"]
+            updated = next(a for a in synced if a["did"] == student["did"])
+            self.assertEqual(updated["name"], "Updated Student One")
+
+    def test_demo_roster_endpoint_is_disabled_outside_demo_mode(self):
+        from unittest.mock import patch
+        with patch.dict(appmod.app.config, {"DEMO_MODE": False}):
+            self.assertEqual(self.c.get("/api/demo/accounts").status_code, 404)
+
     def test_seeds_endpoint_removed(self):
         self.assertEqual(self.c.get("/api/wallet/seeds").status_code, 404)
 

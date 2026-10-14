@@ -10,7 +10,8 @@ jobs:
       - name: Build liboqs (ML-DSA-44 only)
         run: |
           sudo apt-get update && sudo apt-get install -y cmake ninja-build
-          cmake -S liboqs -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+          git clone --depth 1 --branch 0.16.0 https://github.com/open-quantum-safe/liboqs.git /tmp/liboqs
+          cmake -S /tmp/liboqs -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
             -DOQS_MINIMAL_BUILD="SIG_ml_dsa_44" -DOQS_USE_OPENSSL=OFF -DOQS_BUILD_ONLY_LIB=ON
           cmake --build build
           echo "OQS_LIB=$PWD/build/lib/liboqs.so" >> "$GITHUB_ENV"

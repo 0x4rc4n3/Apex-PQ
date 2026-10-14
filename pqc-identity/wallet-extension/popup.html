@@ -18,6 +18,7 @@
   </div>
 
   <div class="content-container">
+    <div class="demo-notice">DEMO ONLY · Shared PIN 12345 · Do not use real identities</div>
     <div class="account-card">
       <div class="account-avatar" id="acc-avatar">?</div>
       <div class="account-details">
@@ -53,7 +54,7 @@
     </div>
   </div>
 
-  <!-- PIN setup / unlock -->
+  <!-- Shared demo PIN unlock -->
   <div class="wallet-overlay" id="pin-overlay">
     <div class="pin-card">
       <div class="pin-icon">
@@ -62,8 +63,8 @@
         </svg>
       </div>
       <h3 id="pin-title">Wallet Locked</h3>
-      <p id="pin-sub">Enter your passphrase to unlock.</p>
-      <input type="password" id="ext-pin" placeholder="Passphrase" autocomplete="off" autofocus>
+      <p id="pin-sub">Enter demo PIN 12345 to unlock.</p>
+      <input type="password" id="ext-pin" placeholder="5-digit PIN" inputmode="numeric" autocomplete="off" autofocus>
       <input type="password" id="ext-pin2" placeholder="Repeat passphrase" autocomplete="off" style="display:none;margin-top:8px">
       <div id="pin-alert" class="pin-alert"></div>
       <button class="btn btn-primary" id="btn-pin-confirm">Unlock Wallet</button>

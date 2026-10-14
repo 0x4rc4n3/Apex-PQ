@@ -91,6 +91,19 @@ body {
   padding: 16px;
 }
 
+.demo-notice {
+  margin-bottom: 12px;
+  padding: 7px 9px;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.08);
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-align: center;
+}
+
 /* ── Account Card ───────────────────────────────────────────── */
 .account-card {
   display: flex;

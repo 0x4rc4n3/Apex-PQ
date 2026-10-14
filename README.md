@@ -34,12 +34,12 @@ pip install -r requirements.txt
 OQS_LIB=/path/to/liboqs.so ./run.sh native
 ```
 
-**First run:** the app generates an admin identity and writes `ADMIN_KEY_IMPORT_THEN_DELETE.json` (mode 0600) in the data directory (`pqc-identity/db/`, or `/data` in Docker; `docker compose cp apex-portal:/data/ADMIN_KEY_IMPORT_THEN_DELETE.json .`). Import it in the wallet, then **delete the file**. The server keeps only the public key.
+**First run:** the app generates an admin identity and writes `ADMIN_KEY_IMPORT_THEN_DELETE.json` (mode 0600) in the data directory (`pqc-identity/db/`, or `/data` in Docker; `docker compose cp apex-portal:/data/ADMIN_KEY_IMPORT_THEN_DELETE.json .`). In explicit demo mode (`APEX_DEMO_MODE=1`), it also seeds `student1`, `student2`, and `student3` and synchronizes all four sample identities into the wallet. The wallet's shared demo PIN is **12345**. These public test identities and their keys are not suitable for real use.
 
 ### Install the wallet
 1. `chrome://extensions` → enable Developer mode → **Load unpacked** → select `pqc-identity/wallet-extension/`.
-2. Open the popup and create a passphrase (min. 10 characters; it cannot be recovered).
-3. **Import identity** → paste the admin JSON, or sign up as a student (the new identity is handed to the wallet and encrypted when you next unlock it).
+2. Open the Apex-PQ site, open the wallet, and enter PIN **12345**. In demo mode, the wallet automatically loads and syncs the admin and three student identities.
+3. Use **Sign & Login** to access the selected account. Manual import remains available for additional identities.
 
 ### Demo mode vs. hardened mode
 This project has no in-browser ML-DSA implementation yet, so the demo generates keys and signs **on the server**:
@@ -59,7 +59,7 @@ Even in demo mode the server never uses a key of its own: `/api/sign` only signs
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `APEX_DEMO_MODE` | `0` (`1` in `run.sh`/compose) | Enable server-side keygen/sign |
+| `APEX_DEMO_MODE` | `0` (`1` in `run.sh`/compose) | Enable server-side keygen/sign and seed the public four-account demo roster |
 | `SECRET_KEY` | random, persisted in data dir | Flask session signing key |
 | `APEX_DATA_DIR` | `pqc-identity/db` | Databases, secrets |
 | `APEX_RP_ID` | request host | Relying-party id bound into signatures |
@@ -71,7 +71,7 @@ Even in demo mode the server never uses a key of its own: `/api/sign` only signs
 | `APEX_BOOTSTRAP_TOKEN` | unset | Optional bearer token for one-time hosted admin-key retrieval; endpoint is disabled when unset |
 
 ### Render Free prototype
-For a public prototype, keep `APEX_DEMO_MODE=0`, set `COOKIE_SECURE=1` and `APEX_TRUST_PROXY=1`, and configure a long random `APEX_BOOTSTRAP_TOKEN` (for example, generate one with `openssl rand -hex 32`). After the first deploy, retrieve the admin wallet JSON exactly once over HTTPS with `GET /api/bootstrap/admin-key` and an `Authorization: Bearer <token>` header. The endpoint deletes the private key file after returning it and sends no-store cache headers. Import the returned JSON into the wallet and keep it private. **Render Free has ephemeral service storage:** the SQLite registry, ledger, and generated admin identity can be lost on restart or redeploy. This configuration is for demos only, not real identity records.
+Set `APEX_DEMO_MODE=1`, `COOKIE_SECURE=1`, and `APEX_TRUST_PROXY=1`. The extension detects the active supported Apex-PQ origin and syncs the demo roster over HTTPS. **Render Free has ephemeral service storage:** the SQLite registry, ledger, demo keys, and identities can be lost on restart or redeploy. This configuration is for demos only, not real identity records.
 
 ## Architecture
 
@@ -97,6 +97,7 @@ Login message: `apex-pq/login/v1 \n rp-id \n did \n challenge`. Binding the rely
 | `POST /api/admin/{approve,reject}/<id>`, `/revoke/<did>`, `/edit/<did>` | admin | Ledger-anchored; role whitelist; last admin protected |
 | `GET /api/blockchain/node/<n>`, `/verify/<n>`, `GET /api/verify/identity` | login | |
 | `POST /api/keygen`, `/api/sign` | demo mode only | See above |
+| `GET /api/demo/accounts` | demo mode only | Returns the four public demo identities, including their shared test private keys |
 
 ## Testing
 ```bash
@@ -110,6 +111,7 @@ The suite covers login success, replay, wrong key, relying-party binding, RBAC, 
 
 **Not solved (be honest about these):**
 - **Demo mode sends the secret key to the server.** A proper fix is ML-DSA in the browser/extension (e.g. a WASM build of liboqs or a vetted JS implementation). Until then use hardened mode with the offline tools.
+- **The shared demo identities and PIN are intentionally public.** In `APEX_DEMO_MODE=1`, `/api/demo/accounts` returns their private keys so the wallet can sync. Never use these demo keys or PIN `12345` for real identities or real data.
 - **The ledger is not BFT.** Three SQLite files in one process: replication and tamper-evidence, not consensus. An attacker with write access to a majority of files can rewrite history; blocks are not signed.
 - **No proof-of-possession at signup**; the admin approval step is the gate.
 - **Admin bootstrap key** is created on the server and must be imported then deleted.
@@ -127,7 +129,7 @@ The suite covers login success, replay, wrong key, relying-party binding, RBAC, 
 ```
 pqc-identity/   app.py models.py ledger.py pqc_engine.py config.py templates/ static/ tools/ tests/
   wallet-extension/   manifest.json popup.* background.js content.js
-liboqs/         vendored liboqs source (consider a git submodule)
+liboqs/         liboqs build/config files; Docker and CI fetch pinned upstream 0.16.0 sources
 Dockerfile  docker-compose.yml  run.sh  .github/workflows/ci.yml
 ```
 
